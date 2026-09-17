@@ -82,31 +82,30 @@ export default function FixedVariableSubTab({ month }: { month: string }) {
         </div>
       </div>
 
-      <div className="table-wrap mb-3">
-        <table className="app-table">
-          <thead>
-            <tr>
-              <th>区分</th>
-              <th className="text-right">予算</th>
-              <th className="text-right">実績</th>
-              <th className="text-right">差引</th>
-            </tr>
-          </thead>
-          <tbody>
-            {['固定費', '変動費'].map((t) => {
-              const row = byType[t] || { budget: 0, actual: 0 };
-              const diff = row.budget - row.actual;
-              return (
-                <tr key={t}>
-                  <td>{t}</td>
-                  <td className="text-right">{formatYen(row.budget)}</td>
-                  <td className="text-right">{formatYen(row.actual)}</td>
-                  <td className={`text-right font-bold ${diff >= 0 ? 'text-green-600' : 'text-red-500'}`}>{formatYen(diff)}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <div className="space-y-3 mb-3">
+        {['固定費', '変動費'].map((t) => {
+          const row = byType[t] || { budget: 0, actual: 0 };
+          const diff = row.budget - row.actual;
+          return (
+            <div key={t} className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4">
+              <div className="font-bold mb-3">{t}</div>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <div className="text-xs text-neutral-500 mb-1">予算</div>
+                  <div className="font-bold">{formatYen(row.budget)}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-neutral-500 mb-1">実績</div>
+                  <div className="font-bold">{formatYen(row.actual)}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-neutral-500 mb-1">差引</div>
+                  <div className={`font-bold ${diff >= 0 ? 'text-green-600' : 'text-red-500'}`}>{formatYen(diff)}</div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <h2 className="font-bold mb-2">固定費・変動費一覧</h2>
@@ -114,91 +113,84 @@ export default function FixedVariableSubTab({ month }: { month: string }) {
         画面上部の「対象月」を選んで、その月に実際に支払った金額を入力・保存してください。
       </p>
 
-      <div className="table-wrap">
-        <table className="app-table">
-          <thead>
-            <tr>
-              <th>分類</th>
-              <th>区分</th>
-              <th>支払対象者</th>
-              <th className="text-right">予算</th>
-              <th>実績</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {!loading && rows.length === 0 && (
-              <tr>
-                <td colSpan={6} className="text-center text-neutral-400 py-4">
-                  この月の固定費・変動費予算がまだありません(先に「予算」タブで設定してください)
-                </td>
-              </tr>
-            )}
-            {rows.map((r) => {
-              const isEditing = editingCategory === r.category;
-              return (
-                <tr key={r.category}>
-                  <td>{r.category}</td>
-                  <td>
-                    <span className={typeBadgeClass(r.type)}>{r.type}</span>
-                  </td>
-                  <td>
-                    {r.bothPersons || !r.editable ? (
-                      <>
-                        <span className="badge-midori mr-1">みどり</span>
-                        <span className="badge-kohei">こうへい</span>
-                      </>
-                    ) : isEditing ? (
-                      <select className="input max-w-[110px] inline-block" value={editPerson} onChange={(e) => setEditPerson(e.target.value)}>
-                        <option value="">未設定</option>
-                        {people.map((p) => (
-                          <option key={p} value={p}>
-                            {p}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span className={personBadgeClass(r.person)}>{r.person || '未設定'}</span>
-                    )}
-                  </td>
-                  <td className="text-right">{formatYen(r.budget)}</td>
-                  <td>
-                    {r.editable && isEditing ? (
-                      <input
-                        type="number"
-                        className="input max-w-[130px] inline-block"
-                        min={0}
-                        step={1}
-                        value={editAmount}
-                        onChange={(e) => setEditAmount(Number(e.target.value))}
-                      />
-                    ) : (
-                      <span className="font-bold">{formatYen(r.actual)}</span>
-                    )}
-                  </td>
-                  <td>
-                    {!r.editable ? null : isEditing ? (
-                      <button className="btn-primary text-xs" onClick={() => onSave(r.category)}>
-                        保存
-                      </button>
-                    ) : (
-                      <button
-                        className="btn-outline text-xs"
-                        onClick={() => {
-                          setEditingCategory(r.category);
-                          setEditAmount(r.actual);
-                          setEditPerson(r.person);
-                        }}
-                      >
-                        編集
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      {!loading && rows.length === 0 && (
+        <p className="text-center text-neutral-400 py-4">
+          この月の固定費・変動費予算がまだありません(先に「予算」タブで設定してください)
+        </p>
+      )}
+      <div className="space-y-3">
+        {rows.map((r) => {
+          const isEditing = editingCategory === r.category;
+          return (
+            <div key={r.category} className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <span className="font-bold">{r.category}</span>
+                <span className={typeBadgeClass(r.type)}>{r.type}</span>
+              </div>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <span className="text-xs text-neutral-500">支払対象者</span>
+                {r.bothPersons || !r.editable ? (
+                  <div className="flex gap-1">
+                    <span className="badge-midori">みどり</span>
+                    <span className="badge-kohei">こうへい</span>
+                  </div>
+                ) : isEditing ? (
+                  <select className="input max-w-[140px]" value={editPerson} onChange={(e) => setEditPerson(e.target.value)}>
+                    <option value="">未設定</option>
+                    {people.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className={personBadgeClass(r.person)}>{r.person || '未設定'}</span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <div className="text-xs text-neutral-500 mb-1">予算</div>
+                  <div className="font-bold">{formatYen(r.budget)}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-neutral-500 mb-1">実績</div>
+                  {r.editable && isEditing ? (
+                    <input
+                      type="number"
+                      className="input"
+                      min={0}
+                      step={1}
+                      value={editAmount}
+                      onChange={(e) => setEditAmount(Number(e.target.value))}
+                    />
+                  ) : (
+                    <div className="font-bold">{formatYen(r.actual)}</div>
+                  )}
+                </div>
+              </div>
+              {r.editable && (
+                <div className="flex justify-end">
+                  {isEditing ? (
+                    <button className="btn-primary text-xs" onClick={() => onSave(r.category)}>
+                      保存
+                    </button>
+                  ) : (
+                    <button
+                      className="btn-outline text-xs"
+                      onClick={() => {
+                        setEditingCategory(r.category);
+                        setEditAmount(r.actual);
+                        setEditPerson(r.person);
+                      }}
+                    >
+                      編集
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

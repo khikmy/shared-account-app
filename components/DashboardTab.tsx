@@ -83,73 +83,69 @@ export default function DashboardTab({ month }: { month: string }) {
 
       <div className="card">
         <h2 className="font-bold mb-3">個人別 精算(翌月1日の入出金)</h2>
-        <div className="table-wrap">
-          <table className="app-table">
-            <thead>
-              <tr>
-                <th>名前</th>
-                <th className="text-right">入金予定額</th>
-                <th className="text-right">支出実績</th>
-                <th className="text-right">差引(翌月)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.personSettlement.map((p) => (
-                <tr key={p.person}>
-                  <td>
-                    <span className={personBadgeClass(p.person)}>{p.person}</span>
-                  </td>
-                  <td className="text-right">{formatYen(p.deposit)}</td>
-                  <td className="text-right">{formatYen(p.spent)}</td>
-                  <td className={`text-right font-bold ${p.net >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                    {formatYen(Math.abs(p.net))} {p.net >= 0 ? '(翌月入金)' : '(翌月出金)'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-3">
+          {data.personSettlement.map((p) => (
+            <div
+              key={p.person}
+              className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className={personBadgeClass(p.person)}>{p.person}</span>
+                <span className={`font-bold ${p.net >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                  {formatYen(Math.abs(p.net))} {p.net >= 0 ? '(翌月入金)' : '(翌月出金)'}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-xs text-neutral-500 mb-1">入金予定額</div>
+                  <div className="text-base font-bold">{formatYen(p.deposit)}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-neutral-500 mb-1">支出実績</div>
+                  <div className="text-base font-bold">{formatYen(p.spent)}</div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
-        <p className="text-xs text-neutral-500 mt-2">
+        <p className="text-xs text-neutral-500 mt-3">
           入金予定額は固定ルールで自動計算されます(こうへい:¥200,000、みどり:予算合計−こうへいの額)。
         </p>
       </div>
 
       <div className="card">
         <h2 className="font-bold mb-3">分類別 予算対比</h2>
-        <div className="table-wrap">
-          <table className="app-table">
-            <thead>
-              <tr>
-                <th>分類</th>
-                <th>区分</th>
-                <th className="text-right">予算</th>
-                <th className="text-right">実績</th>
-                <th className="text-right">差引</th>
-              </tr>
-            </thead>
-            <tbody>
-              {catRows.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="text-center text-neutral-400 py-4">
-                    データがありません
-                  </td>
-                </tr>
-              )}
-              {catRows.map((c) => (
-                <tr key={c.category}>
-                  <td>{c.category}</td>
-                  <td>
-                    <span className={typeBadgeClass(c.type)}>{c.type}</span>
-                  </td>
-                  <td className="text-right">{formatYen(c.budget)}</td>
-                  <td className="text-right">{formatYen(c.actual)}</td>
-                  <td className={`text-right font-bold ${c.diff >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+        {catRows.length === 0 && (
+          <p className="text-center text-neutral-400 py-4">データがありません</p>
+        )}
+        <div className="space-y-3">
+          {catRows.map((c) => (
+            <div
+              key={c.category}
+              className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4"
+            >
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <span className="font-bold">{c.category}</span>
+                <span className={typeBadgeClass(c.type)}>{c.type}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <div className="text-xs text-neutral-500 mb-1">予算</div>
+                  <div className="font-bold">{formatYen(c.budget)}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-neutral-500 mb-1">実績</div>
+                  <div className="font-bold">{formatYen(c.actual)}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-neutral-500 mb-1">差引</div>
+                  <div className={`font-bold ${c.diff >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                     {formatYen(c.diff)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

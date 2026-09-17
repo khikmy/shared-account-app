@@ -97,75 +97,43 @@ export default function ReimburseTab() {
         <button className="btn-outline-danger w-full mb-3" onClick={onSettleAll}>
           精算完了
         </button>
-        <div className="table-wrap">
-          <table className="app-table">
-            <thead>
-              <tr>
-                <th>いつ</th>
-                <th>誰が</th>
-                <th>内容</th>
-                <th className="text-right">金額</th>
-              </tr>
-            </thead>
-            <tbody>
-              {!loading && (data?.list.length ?? 0) === 0 && (
-                <tr>
-                  <td colSpan={4} className="text-center text-neutral-400 py-4">
-                    未精算のデータはありません
-                  </td>
-                </tr>
-              )}
-              {data?.list.map((item) => (
-                <tr key={item.id}>
-                  <td>
-                    <span className="text-xs">{item.date}</span>
-                  </td>
-                  <td>
-                    <span className={personBadgeClass(item.user)}>{item.user}</span>
-                  </td>
-                  <td>{item.content}</td>
-                  <td className="text-right font-bold">{item.amount.toLocaleString()}円</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {!loading && (data?.list.length ?? 0) === 0 && (
+          <p className="text-center text-neutral-400 py-4">未精算のデータはありません</p>
+        )}
+        <div className="space-y-3">
+          {data?.list.map((item) => (
+            <div key={item.id} className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className={personBadgeClass(item.user)}>{item.user}</span>
+                <span className="text-xs text-neutral-500">{item.date}</span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm text-neutral-600 dark:text-neutral-300 break-words">{item.content}</span>
+                <span className="font-bold shrink-0">{item.amount.toLocaleString()}円</span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
       <div className="card">
         <h2 className="font-bold mb-3">精算済の立替履歴</h2>
-        <div className="table-wrap">
-          <table className="app-table">
-            <thead>
-              <tr>
-                <th>いつ</th>
-                <th>誰が</th>
-                <th>内容</th>
-                <th className="text-right">金額</th>
-              </tr>
-            </thead>
-            <tbody>
-              {!loading && allList.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="text-center text-neutral-400 py-4">
-                    精算済みの履歴はありません
-                  </td>
-                </tr>
-              )}
-              {allList.map((item) => (
-                <tr key={item.id}>
-                  <td>
-                    <span className="text-xs">{item.date}</span>
-                  </td>
-                  <td>
-                    <span className={personBadgeClass(item.user)}>{item.user}</span>
-                  </td>
-                  <td>{item.content}</td>
-                  <td className="text-right font-bold">{item.amount.toLocaleString()}円</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {!loading && allList.length === 0 && (
+          <p className="text-center text-neutral-400 py-4">精算済みの履歴はありません</p>
+        )}
+        <div className="space-y-3">
+          {allList.map((item) => (
+            <div key={item.id} className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className={personBadgeClass(item.user)}>{item.user}</span>
+                <span className="text-xs text-neutral-500">{item.date}</span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm text-neutral-600 dark:text-neutral-300 break-words">{item.content}</span>
+                <span className="font-bold shrink-0">{item.amount.toLocaleString()}円</span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

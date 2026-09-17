@@ -11,7 +11,7 @@ export default function HistoryTab({ month }: { month: string }) {
 
   return (
     <div>
-      <div className="flex gap-1 mb-3">
+      <div className="grid grid-cols-2 gap-1 mb-3">
         <button
           className={`rounded-lg px-3 py-1.5 text-xs sm:text-sm font-bold ${
             subTab === 'variable' ? 'bg-primary text-white' : 'bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-800'

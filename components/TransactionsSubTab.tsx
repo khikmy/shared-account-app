@@ -159,49 +159,33 @@ export default function TransactionsSubTab({ month }: { month: string }) {
         </label>
       </div>
 
-      <div className="table-wrap">
-        <table className="app-table">
-          <thead>
-            <tr>
-              <th>日付</th>
-              <th>収支対象</th>
-              <th>分類</th>
-              <th className="text-right">金額</th>
-              <th>メモ</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {!loading && rows.length === 0 && (
-              <tr>
-                <td colSpan={6} className="text-center text-neutral-400 py-4">
-                  取引がありません
-                </td>
-              </tr>
+      {!loading && rows.length === 0 && (
+        <p className="text-center text-neutral-400 py-4">取引がありません</p>
+      )}
+      <div className="space-y-3">
+        {rows.map((r) => (
+          <div key={r.id} className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <span className={personBadgeClass(r.person)}>{r.person}</span>
+              <span className="text-xs text-neutral-500">{r.date}</span>
+            </div>
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <span className="text-sm text-neutral-600 dark:text-neutral-300">{r.category}</span>
+              <span className="font-bold">{formatYen(r.amount)}</span>
+            </div>
+            {r.memo && (
+              <div className="text-sm text-neutral-500 mb-3 break-words">{r.memo}</div>
             )}
-            {rows.map((r) => (
-              <tr key={r.id}>
-                <td>
-                  <span className="text-xs">{r.date}</span>
-                </td>
-                <td>
-                  <span className={personBadgeClass(r.person)}>{r.person}</span>
-                </td>
-                <td>{r.category}</td>
-                <td className="text-right font-bold">{formatYen(r.amount)}</td>
-                <td>{r.memo}</td>
-                <td className="whitespace-nowrap">
-                  <button className="btn-outline text-xs mr-1" onClick={() => openEdit(r)}>
-                    編集
-                  </button>
-                  <button className="btn-outline-danger text-xs" onClick={() => onDelete(r.id)}>
-                    削除
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            <div className="flex gap-2 justify-end">
+              <button className="btn-outline text-xs" onClick={() => openEdit(r)}>
+                編集
+              </button>
+              <button className="btn-outline-danger text-xs" onClick={() => onDelete(r.id)}>
+                削除
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
 
       {modalOpen && (

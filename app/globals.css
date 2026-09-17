@@ -37,7 +37,7 @@ body {
 }
 
 .badge {
-  @apply inline-block rounded-full px-2.5 py-0.5 text-xs font-bold text-white;
+  @apply inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-bold text-white;
 }
 .badge-midori {
   @apply badge bg-midori;

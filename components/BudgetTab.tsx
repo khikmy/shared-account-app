@@ -132,68 +132,50 @@ export default function BudgetTab({ month }: { month: string }) {
         </form>
       )}
 
-      <div className="table-wrap">
-        <table className="app-table">
-          <thead>
-            <tr>
-              <th>分類</th>
-              <th>区分</th>
-              <th className="text-right">予算金額</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {!loading && rows.length === 0 && (
-              <tr>
-                <td colSpan={4} className="text-center text-neutral-400 py-4">
-                  この月の予算はまだ設定されていません
-                </td>
-              </tr>
-            )}
-            {rows.map((r) => {
-              const isEditing = editingCategory === r.category;
-              return (
-                <tr key={r.category}>
-                  <td>{r.category}</td>
-                  <td>
-                    <span className={typeBadgeClass(r.type)}>{r.type}</span>
-                  </td>
-                  <td className="text-right">
-                    {isEditing ? (
-                      <input
-                        type="number"
-                        className="input inline-block max-w-[130px]"
-                        min={0}
-                        step={1}
-                        value={editAmount}
-                        onChange={(e) => setEditAmount(Number(e.target.value))}
-                      />
-                    ) : (
-                      <span className="font-bold">{formatYen(r.amount)}</span>
-                    )}
-                  </td>
-                  <td>
-                    {isEditing ? (
-                      <button className="btn-primary text-xs" onClick={() => onSaveEdit(r.category, r.type)}>
-                        保存
-                      </button>
-                    ) : (
-                      <button
-                        className="btn-outline text-xs"
-                        onClick={() => {
-                          setEditingCategory(r.category);
-                          setEditAmount(r.amount);
-                        }}
-                      >
-                        編集
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      {!loading && rows.length === 0 && (
+        <p className="text-center text-neutral-400 py-4">この月の予算はまだ設定されていません</p>
+      )}
+      <div className="space-y-3">
+        {rows.map((r) => {
+          const isEditing = editingCategory === r.category;
+          return (
+            <div key={r.category} className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <span className="font-bold">{r.category}</span>
+                <span className={typeBadgeClass(r.type)}>{r.type}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                {isEditing ? (
+                  <input
+                    type="number"
+                    className="input"
+                    min={0}
+                    step={1}
+                    value={editAmount}
+                    onChange={(e) => setEditAmount(Number(e.target.value))}
+                  />
+                ) : (
+                  <span className="text-lg font-bold">{formatYen(r.amount)}</span>
+                )}
+                {isEditing ? (
+                  <button className="btn-primary text-xs shrink-0" onClick={() => onSaveEdit(r.category, r.type)}>
+                    保存
+                  </button>
+                ) : (
+                  <button
+                    className="btn-outline text-xs shrink-0"
+                    onClick={() => {
+                      setEditingCategory(r.category);
+                      setEditAmount(r.amount);
+                    }}
+                  >
+                    編集
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
