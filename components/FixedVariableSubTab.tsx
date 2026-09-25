@@ -23,7 +23,7 @@ export default function FixedVariableSubTab({ month }: { month: string }) {
   const [loading, setLoading] = useState(true);
   const [people, setPeople] = useState<string[]>([]);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
-  const [editAmount, setEditAmount] = useState<number>(0);
+  const [editAmount, setEditAmount] = useState<string>('');
   const [editPerson, setEditPerson] = useState<string>('');
   const showToast = useToast();
 
@@ -59,7 +59,7 @@ export default function FixedVariableSubTab({ month }: { month: string }) {
 
   async function onSave(category: string) {
     try {
-      await setFixedVariableActual(month, category, editAmount, editPerson);
+      await setFixedVariableActual(month, category, Number(editAmount) || 0, editPerson);
       showToast('保存しました');
       setEditingCategory(null);
       load();
@@ -161,7 +161,7 @@ export default function FixedVariableSubTab({ month }: { month: string }) {
                       min={0}
                       step={1}
                       value={editAmount}
-                      onChange={(e) => setEditAmount(Number(e.target.value))}
+                      onChange={(e) => setEditAmount(e.target.value)}
                     />
                   ) : (
                     <div className="font-bold">{formatYen(r.actual)}</div>
@@ -169,17 +169,22 @@ export default function FixedVariableSubTab({ month }: { month: string }) {
                 </div>
               </div>
               {r.editable && (
-                <div className="flex justify-end">
+                <div className="flex justify-end gap-2">
                   {isEditing ? (
-                    <button className="btn-primary text-xs" onClick={() => onSave(r.category)}>
-                      保存
-                    </button>
+                    <>
+                      <button className="btn-outline text-xs" onClick={() => setEditingCategory(null)}>
+                        戻る
+                      </button>
+                      <button className="btn-primary text-xs" onClick={() => onSave(r.category)}>
+                        保存
+                      </button>
+                    </>
                   ) : (
                     <button
                       className="btn-outline text-xs"
                       onClick={() => {
                         setEditingCategory(r.category);
-                        setEditAmount(r.actual);
+                        setEditAmount(r.actual ? String(r.actual) : '');
                         setEditPerson(r.person);
                       }}
                     >
