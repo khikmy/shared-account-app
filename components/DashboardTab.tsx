@@ -49,7 +49,8 @@ export default function DashboardTab({ month }: { month: string }) {
 
   const cards = [
     { label: '前月末時点での残高', value: data.prevBalance },
-    { label: '今月の収支', value: data.monthNet, signed: true },
+    { label: '今月の収支', value: data.monthNet - data.savingsActual, signed: true },
+    { label: '積立貯金', value: data.savingsActual },
     { label: '共有口座残高', value: data.accountBalance },
   ];
 
@@ -65,7 +66,7 @@ export default function DashboardTab({ month }: { month: string }) {
   return (
     <div>
       <div className="card">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {cards.map((c) => (
             <div key={c.label} className="p-3 border border-neutral-200 dark:border-neutral-800 rounded-lg text-center">
               <div className="text-xs text-neutral-500">{c.label}</div>
