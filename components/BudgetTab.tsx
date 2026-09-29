@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { copyBudgetFromPreviousMonth, getBudget, setBudgetItem } from '@/app/actions';
+import { copyBudgetFromPreviousMonth, deleteBudgetItem, getBudget, setBudgetItem } from '@/app/actions';
 import { formatYen, sortByDisplayOrder } from '@/lib/calc';
 import type { BudgetItem, BudgetType } from '@/lib/types';
 import { useToast } from './ToastContext';
@@ -61,6 +61,17 @@ export default function BudgetTab({ month }: { month: string }) {
       await setBudgetItem(month, category, editAmount, type);
       showToast('予算を保存しました');
       setEditingCategory(null);
+      load();
+    } catch (err) {
+      showToast('エラー: ' + (err as Error).message, true);
+    }
+  }
+
+  async function onDelete(category: string) {
+    if (!confirm('この予算分類を削除しますか？')) return;
+    try {
+      await deleteBudgetItem(month, category);
+      showToast('削除しました');
       load();
     } catch (err) {
       showToast('エラー: ' + (err as Error).message, true);
@@ -158,19 +169,29 @@ export default function BudgetTab({ month }: { month: string }) {
                   <span className="text-lg font-bold">{formatYen(r.amount)}</span>
                 )}
                 {isEditing ? (
-                  <button className="btn-primary text-xs shrink-0" onClick={() => onSaveEdit(r.category, r.type)}>
-                    保存
-                  </button>
+                  <div className="flex gap-2 shrink-0">
+                    <button className="btn-outline text-xs" onClick={() => setEditingCategory(null)}>
+                      戻る
+                    </button>
+                    <button className="btn-primary text-xs" onClick={() => onSaveEdit(r.category, r.type)}>
+                      保存
+                    </button>
+                  </div>
                 ) : (
-                  <button
-                    className="btn-outline text-xs shrink-0"
-                    onClick={() => {
-                      setEditingCategory(r.category);
-                      setEditAmount(r.amount);
-                    }}
-                  >
-                    編集
-                  </button>
+                  <div className="flex gap-2 shrink-0">
+                    <button className="btn-outline-danger text-xs" onClick={() => onDelete(r.category)}>
+                      削除
+                    </button>
+                    <button
+                      className="btn-outline text-xs"
+                      onClick={() => {
+                        setEditingCategory(r.category);
+                        setEditAmount(r.amount);
+                      }}
+                    >
+                      編集
+                    </button>
+                  </div>
                 )}
               </div>
             </div>

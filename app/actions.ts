@@ -306,6 +306,19 @@ export async function setFixedVariableActual(
   revalidatePath('/');
 }
 
+export async function deleteFixedVariableActual(monthStr: string, category: string): Promise<void> {
+  if (category === '食費・日用品' || category === '食費・消耗品費・交際費') {
+    throw new Error('食費・消耗品費・交際費の実績は自動計算のため、このタブでは削除できません。');
+  }
+  const { error } = await supabase
+    .from('fixed_variable_actuals')
+    .delete()
+    .eq('target_month', monthStr)
+    .eq('category', category);
+  if (error) throw new Error(error.message);
+  revalidatePath('/');
+}
+
 // ===================== 立替金 =====================
 
 export interface ReimburseFilter {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getFixedVariableActuals, getPeople, setFixedVariableActual } from '@/app/actions';
+import { deleteFixedVariableActual, getFixedVariableActuals, getPeople, setFixedVariableActual } from '@/app/actions';
 import { formatYen, sortByDisplayOrder } from '@/lib/calc';
 import type { FixedVariableRow } from '@/lib/types';
 import { useToast } from './ToastContext';
@@ -62,6 +62,17 @@ export default function FixedVariableSubTab({ month }: { month: string }) {
       await setFixedVariableActual(month, category, Number(editAmount) || 0, editPerson);
       showToast('保存しました');
       setEditingCategory(null);
+      load();
+    } catch (err) {
+      showToast('エラー: ' + (err as Error).message, true);
+    }
+  }
+
+  async function onDelete(category: string) {
+    if (!confirm('この実績を削除しますか？')) return;
+    try {
+      await deleteFixedVariableActual(month, category);
+      showToast('削除しました');
       load();
     } catch (err) {
       showToast('エラー: ' + (err as Error).message, true);
@@ -180,16 +191,21 @@ export default function FixedVariableSubTab({ month }: { month: string }) {
                       </button>
                     </>
                   ) : (
-                    <button
-                      className="btn-outline text-xs"
-                      onClick={() => {
-                        setEditingCategory(r.category);
-                        setEditAmount(r.actual ? String(r.actual) : '');
-                        setEditPerson(r.person);
-                      }}
-                    >
-                      編集
-                    </button>
+                    <>
+                      <button className="btn-outline-danger text-xs" onClick={() => onDelete(r.category)}>
+                        削除
+                      </button>
+                      <button
+                        className="btn-outline text-xs"
+                        onClick={() => {
+                          setEditingCategory(r.category);
+                          setEditAmount(r.actual ? String(r.actual) : '');
+                          setEditPerson(r.person);
+                        }}
+                      >
+                        編集
+                      </button>
+                    </>
                   )}
                 </div>
               )}
