@@ -21,6 +21,12 @@ const TABS: { key: TabKey; label: string }[] = [
 export default function MainApp() {
   const [month, setMonth] = useState(currentMonthStr());
   const [tab, setTab] = useState<TabKey>('dashboard');
+  const [visitedTabs, setVisitedTabs] = useState<Set<TabKey>>(() => new Set(['dashboard']));
+
+  function selectTab(key: TabKey) {
+    setTab(key);
+    setVisitedTabs((prev) => (prev.has(key) ? prev : new Set(prev).add(key)));
+  }
 
   return (
     <ToastProvider>
@@ -54,7 +60,7 @@ export default function MainApp() {
           {TABS.map((t) => (
             <button
               key={t.key}
-              onClick={() => setTab(t.key)}
+              onClick={() => selectTab(t.key)}
               className={`rounded-lg py-2 text-xs sm:text-sm font-bold transition-colors ${
                 tab === t.key ? 'bg-primary text-white' : 'bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-800'
               }`}
@@ -64,10 +70,26 @@ export default function MainApp() {
           ))}
         </div>
 
-        {tab === 'dashboard' && <DashboardTab month={month} />}
-        {tab === 'history' && <HistoryTab month={month} />}
-        {tab === 'budget' && <BudgetTab month={month} />}
-        {tab === 'reimburse' && <ReimburseTab />}
+        {visitedTabs.has('dashboard') && (
+          <div hidden={tab !== 'dashboard'}>
+            <DashboardTab month={month} />
+          </div>
+        )}
+        {visitedTabs.has('history') && (
+          <div hidden={tab !== 'history'}>
+            <HistoryTab month={month} />
+          </div>
+        )}
+        {visitedTabs.has('budget') && (
+          <div hidden={tab !== 'budget'}>
+            <BudgetTab month={month} />
+          </div>
+        )}
+        {visitedTabs.has('reimburse') && (
+          <div hidden={tab !== 'reimburse'}>
+            <ReimburseTab />
+          </div>
+        )}
       </div>
     </ToastProvider>
   );
