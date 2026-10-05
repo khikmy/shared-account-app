@@ -7,9 +7,14 @@ import { AUTH_COOKIE, verifyPassword } from '@/lib/auth';
 import {
   BANK_PERSON,
   FIXED_CATEGORIES,
+  MEDIAN_BUDGET_CATEGORIES,
+  MEDIAN_BUDGET_START,
   SAVINGS_CATEGORY,
   computeDashboard,
   computeSettlementMessage,
+  isMedianBudgetLocked,
+  medianBudgetAmount,
+  monthKeyFromDateStr,
 } from '@/lib/calc';
 import type {
   BudgetItem,
@@ -148,6 +153,9 @@ export async function setBudgetItem(
   amount: number,
   type: BudgetType
 ): Promise<void> {
+  if (isMedianBudgetLocked(monthStr, category)) {
+    throw new Error('この予算は実績の中央値で自動算出されるため、編集できません');
+  }
   const { error } = await supabase
     .from('budgets')
     .upsert(
@@ -159,6 +167,9 @@ export async function setBudgetItem(
 }
 
 export async function deleteBudgetItem(monthStr: string, category: string): Promise<void> {
+  if (isMedianBudgetLocked(monthStr, category)) {
+    throw new Error('この予算は実績の中央値で自動算出されるため、削除できません');
+  }
   const { error } = await supabase
     .from('budgets')
     .delete()
@@ -190,8 +201,38 @@ export async function copyBudgetFromPreviousMonth(monthStr: string): Promise<Bud
     const { error } = await supabase.from('budgets').insert(toInsert);
     if (error) throw new Error(error.message);
   }
+  await applyMedianBudgets(monthStr);
   revalidatePath('/');
   return getBudget(monthStr);
+}
+
+/** MEDIAN_BUDGET_START 以降の月は、ガス・電気・水道・食費日用品の予算を前月までの実績の中央値で上書きする */
+async function applyMedianBudgets(monthStr: string): Promise<void> {
+  if (monthStr < MEDIAN_BUDGET_START) return;
+
+  const actuals: Record<string, Record<string, number>> = {};
+  (await getAllFixedVariableRaw()).forEach((r) => {
+    (actuals[r.category] ??= {})[r.target_month] = Number(r.amount);
+  });
+  const foodCategories = new Set(['食費', '消耗品費', '交際費']);
+  const food: Record<string, number> = {};
+  (await getAllTransactionsRaw()).forEach((t) => {
+    if (t.person === BANK_PERSON || !foodCategories.has(t.category)) return;
+    const m = monthKeyFromDateStr(t.date);
+    food[m] = (food[m] || 0) + Number(t.amount);
+  });
+  actuals['食費・日用品'] = food;
+
+  const current = await getBudget(monthStr);
+  const rows = MEDIAN_BUDGET_CATEGORIES.flatMap((category) => {
+    const amount = medianBudgetAmount(category, monthStr, actuals[category] || {});
+    if (amount === null) return [];
+    const type = current.find((b) => b.category === category)?.type ?? '変動費';
+    return [{ target_month: monthStr, category, amount, type }];
+  });
+  if (rows.length === 0) return;
+  const { error } = await supabase.from('budgets').upsert(rows, { onConflict: 'target_month,category' });
+  if (error) throw new Error(error.message);
 }
 
 // ===================== 固定費・変動費 =====================

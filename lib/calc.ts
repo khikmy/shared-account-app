@@ -36,6 +36,45 @@ export const CATEGORY_DISPLAY_NAME: Record<string, string> = {
   '食費・日用品': '食費・消耗品費・交際費',
 };
 
+// ===================== 実績の中央値による予算 =====================
+
+/** この月以降の予算は、前月までの実績の中央値から決める */
+export const MEDIAN_BUDGET_START = '2026-10';
+/** 中央値の対象とする最初の月 (2025-11 は引っ越し直後で実績が不完全なため除く) */
+export const MEDIAN_BUDGET_FROM = '2025-12';
+export const MEDIAN_BUDGET_CATEGORIES = ['ガス', '電気', '水道', '食費・日用品'];
+/** 2ヶ月に1度だけ請求がある分類。請求月は偶数月で、それ以外の月は 0 円 */
+export const BIMONTHLY_CATEGORIES = ['水道'];
+
+/** 中央値で自動算出される予算は、編集・削除できない */
+export function isMedianBudgetLocked(monthStr: string, category: string): boolean {
+  return monthStr >= MEDIAN_BUDGET_START && MEDIAN_BUDGET_CATEGORIES.includes(category);
+}
+
+export function median(values: number[]): number {
+  const s = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
+
+/**
+ * 前月までの月別実績 (0円の月は未入力・請求なしとして除く) の中央値を100円単位で四捨五入した予算額。
+ * 対象月が中央値の適用外、または実績がまだ無い場合は null。
+ */
+export function medianBudgetAmount(
+  category: string,
+  monthStr: string,
+  actualsByMonth: Record<string, number>
+): number | null {
+  if (monthStr < MEDIAN_BUDGET_START || !MEDIAN_BUDGET_CATEGORIES.includes(category)) return null;
+  if (BIMONTHLY_CATEGORIES.includes(category) && Number(monthStr.slice(5, 7)) % 2 === 1) return 0;
+  const values = Object.entries(actualsByMonth)
+    .filter(([m, v]) => m >= MEDIAN_BUDGET_FROM && m < monthStr && v > 0)
+    .map(([, v]) => v);
+  if (values.length === 0) return null;
+  return Math.round(median(values) / 100) * 100;
+}
+
 export function sortByDisplayOrder<T extends { category: string }>(rows: T[]): T[] {
   return [...rows].sort((a, b) => {
     let ai = BUDGET_DISPLAY_ORDER.indexOf(a.category);

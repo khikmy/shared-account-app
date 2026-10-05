@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { copyBudgetFromPreviousMonth, deleteBudgetItem, getBudget, setBudgetItem } from '@/app/actions';
-import { formatYen, sortByDisplayOrder } from '@/lib/calc';
+import { formatYen, isMedianBudgetLocked, sortByDisplayOrder } from '@/lib/calc';
 import type { BudgetItem, BudgetType } from '@/lib/types';
 import { useToast } from './ToastContext';
 
@@ -149,6 +149,7 @@ export default function BudgetTab({ month }: { month: string }) {
       <div className="space-y-3">
         {rows.map((r) => {
           const isEditing = editingCategory === r.category;
+          const locked = isMedianBudgetLocked(month, r.category);
           return (
             <div key={r.category} className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4">
               <div className="flex items-center justify-between gap-2 mb-3">
@@ -177,6 +178,8 @@ export default function BudgetTab({ month }: { month: string }) {
                       保存
                     </button>
                   </div>
+                ) : locked ? (
+                  <span className="text-xs text-neutral-500 shrink-0">実績の中央値で自動算出</span>
                 ) : (
                   <div className="flex gap-2 shrink-0">
                     <button className="btn-outline-danger text-xs" onClick={() => onDelete(r.category)}>
