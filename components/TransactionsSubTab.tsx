@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { addHistory, deleteHistory, getHistory, getPeople, updateHistory } from '@/app/actions';
-import { FIXED_CATEGORIES, formatYen } from '@/lib/calc';
+import { BANK_PERSON, FIXED_CATEGORIES, formatYen } from '@/lib/calc';
 import type { Transaction } from '@/lib/types';
 import { useToast } from './ToastContext';
 
@@ -12,7 +12,7 @@ function personBadgeClass(person: string) {
   return 'badge-other';
 }
 
-const emptyForm = { date: '', person: '', category: '', amount: '' as number | '', memo: '' };
+const emptyForm = { date: '', person: '', category: '', amount: '' as number | '', memo: '', bankType: '収入' as '収入' | '支出' };
 
 export default function TransactionsSubTab({ month }: { month: string }) {
   const [rows, setRows] = useState<Transaction[]>([]);
@@ -26,6 +26,7 @@ export default function TransactionsSubTab({ month }: { month: string }) {
   const [editId, setEditId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
   const showToast = useToast();
+  const personOptions = [...people, BANK_PERSON];
 
   useEffect(() => {
     getPeople().then(setPeople).catch(() => {});
@@ -49,11 +50,11 @@ export default function TransactionsSubTab({ month }: { month: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [month, monthOnly, personFilter, categoryFilter, keyword]);
 
-  const total = rows.reduce((sum, r) => (r.person === '銀行' ? sum : sum + Number(r.amount || 0)), 0);
+  const total = rows.reduce((sum, r) => (r.person === BANK_PERSON ? sum : sum + Number(r.amount || 0)), 0);
   const categoryTotals: Record<string, number> = { 食費: 0, 消耗品費: 0, 交際費: 0 };
   let bankTotal = 0;
   rows.forEach((r) => {
-    if (r.person === '銀行') bankTotal += Number(r.amount || 0);
+    if (r.person === BANK_PERSON) bankTotal += Number(r.amount || 0);
     else if (r.category in categoryTotals) categoryTotals[r.category] += Number(r.amount || 0);
   });
 
@@ -65,7 +66,15 @@ export default function TransactionsSubTab({ month }: { month: string }) {
 
   function openEdit(row: Transaction) {
     setEditId(row.id);
-    setForm({ date: row.date, person: row.person, category: row.category, amount: row.amount, memo: row.memo || '' });
+    const isBankExpense = row.person === BANK_PERSON && row.amount < 0;
+    setForm({
+      date: row.date,
+      person: row.person,
+      category: row.category,
+      amount: isBankExpense ? -row.amount : row.amount,
+      memo: row.memo || '',
+      bankType: isBankExpense ? '支出' : '収入',
+    });
     setModalOpen(true);
   }
 
@@ -76,7 +85,8 @@ export default function TransactionsSubTab({ month }: { month: string }) {
       date: form.date,
       person: form.person,
       category: form.category,
-      amount: Number(form.amount),
+      // 銀行は収入をプラス、支出をマイナスで保存する(集計は単純合算で収支に反映される)
+      amount: form.person === BANK_PERSON && form.bankType === '支出' ? -Number(form.amount) : Number(form.amount),
       memo: form.memo,
     };
     try {
@@ -129,7 +139,7 @@ export default function TransactionsSubTab({ month }: { month: string }) {
         ))}
         <div className="p-2 border border-neutral-200 dark:border-neutral-800 rounded-lg bg-neutral-50 dark:bg-neutral-950 text-center flex-1 min-w-[80px]">
           <div className="text-xs text-neutral-500">銀行</div>
-          <div className="font-bold text-neutral-500">{formatYen(bankTotal)}</div>
+          <div className="font-bold text-neutral-500">{formatYen(-bankTotal)}</div>
         </div>
       </div>
 
@@ -138,7 +148,7 @@ export default function TransactionsSubTab({ month }: { month: string }) {
         <div className="grid grid-cols-2 gap-2">
           <select className="input" value={personFilter} onChange={(e) => setPersonFilter(e.target.value)}>
             <option value="">全員</option>
-            {people.map((p) => (
+            {personOptions.map((p) => (
               <option key={p} value={p}>
                 {p}
               </option>
@@ -171,7 +181,14 @@ export default function TransactionsSubTab({ month }: { month: string }) {
             </div>
             <div className="flex items-center justify-between gap-2 mb-3">
               <span className="text-sm text-neutral-600 dark:text-neutral-300">{r.category}</span>
-              <span className="font-bold">{formatYen(r.amount)}</span>
+              <span className="font-bold">
+                {r.person === BANK_PERSON && (
+                  <span className={`text-xs mr-2 ${r.amount < 0 ? 'text-red-500' : 'text-green-600'}`}>
+                    {r.amount < 0 ? '支出' : '収入'}
+                  </span>
+                )}
+                {formatYen(r.person === BANK_PERSON ? Math.abs(r.amount) : r.amount)}
+              </span>
             </div>
             {r.memo && (
               <div className="text-sm text-neutral-500 mb-3 break-words">{r.memo}</div>
@@ -211,11 +228,24 @@ export default function TransactionsSubTab({ month }: { month: string }) {
                 onChange={(e) => setForm({ ...form, person: e.target.value })}
               />
               <datalist id="person-list">
-                {people.map((p) => (
+                {personOptions.map((p) => (
                   <option key={p} value={p} />
                 ))}
               </datalist>
             </div>
+            {form.person === BANK_PERSON && (
+              <div className="mb-3">
+                <label className="text-sm font-bold block mb-1">収入/支出</label>
+                <select
+                  className="input"
+                  value={form.bankType}
+                  onChange={(e) => setForm({ ...form, bankType: e.target.value as '収入' | '支出' })}
+                >
+                  <option value="収入">収入</option>
+                  <option value="支出">支出</option>
+                </select>
+              </div>
+            )}
             <div className="mb-3">
               <label className="text-sm font-bold block mb-1">分類</label>
               <select className="input" required value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { deleteFixedVariableActual, getFixedVariableActuals, getPeople, setFixedVariableActual } from '@/app/actions';
-import { formatYen, sortByDisplayOrder } from '@/lib/calc';
+import { BANK_PERSON, formatYen, sortByDisplayOrder } from '@/lib/calc';
 import type { FixedVariableRow } from '@/lib/types';
 import { useToast } from './ToastContext';
 
@@ -148,7 +148,7 @@ export default function FixedVariableSubTab({ month }: { month: string }) {
                 ) : isEditing ? (
                   <select className="input max-w-[140px]" value={editPerson} onChange={(e) => setEditPerson(e.target.value)}>
                     <option value="">未設定</option>
-                    {people.map((p) => (
+                    {[...people, BANK_PERSON].map((p) => (
                       <option key={p} value={p}>
                         {p}
                       </option>
