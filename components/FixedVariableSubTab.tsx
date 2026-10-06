@@ -83,12 +83,12 @@ export default function FixedVariableSubTab({ month }: { month: string }) {
     <div className="card">
       <h2 className="font-bold mb-3">固定費・変動費 予算対比</h2>
       <div className="grid grid-cols-2 gap-2 mb-3">
-        <div className="p-2 border border-neutral-200 dark:border-neutral-800 rounded-lg bg-neutral-50 dark:bg-neutral-950 text-center">
-          <div className="text-xs text-neutral-500">区分合計(予算)</div>
+        <div className="p-2 border border-slate-200 rounded-lg bg-slate-50 text-center">
+          <div className="text-xs text-slate-500">区分合計(予算)</div>
           <div className="font-bold text-primary">{formatYen(totalBudget)}</div>
         </div>
-        <div className="p-2 border border-neutral-200 dark:border-neutral-800 rounded-lg bg-neutral-50 dark:bg-neutral-950 text-center">
-          <div className="text-xs text-neutral-500">区分合計(実績)</div>
+        <div className="p-2 border border-slate-200 rounded-lg bg-slate-50 text-center">
+          <div className="text-xs text-slate-500">区分合計(実績)</div>
           <div className="font-bold text-primary">{formatYen(totalActual)}</div>
         </div>
       </div>
@@ -98,19 +98,19 @@ export default function FixedVariableSubTab({ month }: { month: string }) {
           const row = byType[t] || { budget: 0, actual: 0 };
           const diff = row.budget - row.actual;
           return (
-            <div key={t} className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4">
+            <div key={t} className="rounded-lg border border-slate-200 p-4">
               <div className="font-bold mb-3">{t}</div>
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div>
-                  <div className="text-xs text-neutral-500 mb-1">予算</div>
+                  <div className="text-xs text-slate-500 mb-1">予算</div>
                   <div className="font-bold">{formatYen(row.budget)}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-neutral-500 mb-1">実績</div>
+                  <div className="text-xs text-slate-500 mb-1">実績</div>
                   <div className="font-bold">{formatYen(row.actual)}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-neutral-500 mb-1">差引</div>
+                  <div className="text-xs text-slate-500 mb-1">差引</div>
                   <div className={`font-bold ${diff >= 0 ? 'text-green-600' : 'text-red-500'}`}>{formatYen(diff)}</div>
                 </div>
               </div>
@@ -120,12 +120,12 @@ export default function FixedVariableSubTab({ month }: { month: string }) {
       </div>
 
       <h2 className="font-bold mb-2">固定費・変動費一覧</h2>
-      <p className="text-xs text-neutral-500 mb-3">
+      <p className="text-xs text-slate-500 mb-3">
         画面上部の「対象月」を選んで、その月に実際に支払った金額を入力・保存してください。
       </p>
 
       {!loading && rows.length === 0 && (
-        <p className="text-center text-neutral-400 py-4">
+        <p className="text-center text-slate-400 py-4">
           この月の固定費・変動費予算がまだありません(先に「予算」タブで設定してください)
         </p>
       )}
@@ -133,13 +133,13 @@ export default function FixedVariableSubTab({ month }: { month: string }) {
         {rows.map((r) => {
           const isEditing = editingCategory === r.category;
           return (
-            <div key={r.category} className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4">
+            <div key={r.category} className="rounded-lg border border-slate-200 p-4">
               <div className="flex items-center justify-between gap-2 mb-3">
                 <span className="font-bold">{r.category}</span>
                 <span className={typeBadgeClass(r.type)}>{r.type}</span>
               </div>
               <div className="flex items-center justify-between gap-2 mb-3">
-                <span className="text-xs text-neutral-500">支払対象者</span>
+                <span className="text-xs text-slate-500">支払対象者</span>
                 {r.bothPersons || !r.editable ? (
                   <div className="flex gap-1">
                     <span className="badge-midori">みどり</span>
@@ -160,11 +160,11 @@ export default function FixedVariableSubTab({ month }: { month: string }) {
               </div>
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
-                  <div className="text-xs text-neutral-500 mb-1">予算</div>
+                  <div className="text-xs text-slate-500 mb-1">予算</div>
                   <div className="font-bold">{formatYen(r.budget)}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-neutral-500 mb-1">実績</div>
+                  <div className="text-xs text-slate-500 mb-1">実績</div>
                   {r.editable && isEditing ? (
                     <input
                       type="number"

@@ -73,16 +73,16 @@ export default function ReimburseTab() {
       <div className="card">
         <h2 className="font-bold mb-3">現在の未精算状況</h2>
         <div className="grid grid-cols-2 gap-2 mb-3 text-center">
-          <div className="p-2 border border-neutral-200 dark:border-neutral-800 rounded-lg bg-neutral-50 dark:bg-neutral-950">
-            <div className="text-xs text-neutral-500">みどりの立替合計</div>
+          <div className="p-2 border border-slate-200 rounded-lg bg-slate-50">
+            <div className="text-xs text-slate-500">みどりの立替合計</div>
             <div className="text-lg font-bold text-midori">{(data?.totalMidori || 0).toLocaleString()} 円</div>
           </div>
-          <div className="p-2 border border-neutral-200 dark:border-neutral-800 rounded-lg bg-neutral-50 dark:bg-neutral-950">
-            <div className="text-xs text-neutral-500">こうへいの立替合計</div>
+          <div className="p-2 border border-slate-200 rounded-lg bg-slate-50">
+            <div className="text-xs text-slate-500">こうへいの立替合計</div>
             <div className="text-lg font-bold text-kohei">{(data?.totalKohei || 0).toLocaleString()} 円</div>
           </div>
         </div>
-        <div className="p-3 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-center text-sm font-bold text-primary">
+        <div className="p-3 rounded-lg bg-blue-50 text-center text-sm font-bold text-primary">
           {loading ? '計算中...' : data?.settlementMessage}
         </div>
       </div>
@@ -98,17 +98,17 @@ export default function ReimburseTab() {
           精算完了
         </button>
         {!loading && (data?.list.length ?? 0) === 0 && (
-          <p className="text-center text-neutral-400 py-4">未精算のデータはありません</p>
+          <p className="text-center text-slate-400 py-4">未精算のデータはありません</p>
         )}
         <div className="space-y-3">
           {data?.list.map((item) => (
-            <div key={item.id} className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4">
+            <div key={item.id} className="rounded-lg border border-slate-200 p-4">
               <div className="flex items-center justify-between gap-2 mb-2">
                 <span className={personBadgeClass(item.user)}>{item.user}</span>
-                <span className="text-xs text-neutral-500">{item.date}</span>
+                <span className="text-xs text-slate-500">{item.date}</span>
               </div>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-sm text-neutral-600 dark:text-neutral-300 break-words">{item.content}</span>
+                <span className="text-sm text-slate-600 break-words">{item.content}</span>
                 <span className="font-bold shrink-0">{item.amount.toLocaleString()}円</span>
               </div>
             </div>
@@ -119,17 +119,17 @@ export default function ReimburseTab() {
       <div className="card">
         <h2 className="font-bold mb-3">精算済の立替履歴</h2>
         {!loading && allList.length === 0 && (
-          <p className="text-center text-neutral-400 py-4">精算済みの履歴はありません</p>
+          <p className="text-center text-slate-400 py-4">精算済みの履歴はありません</p>
         )}
         <div className="space-y-3">
           {allList.map((item) => (
-            <div key={item.id} className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4">
+            <div key={item.id} className="rounded-lg border border-slate-200 p-4">
               <div className="flex items-center justify-between gap-2 mb-2">
                 <span className={personBadgeClass(item.user)}>{item.user}</span>
-                <span className="text-xs text-neutral-500">{item.date}</span>
+                <span className="text-xs text-slate-500">{item.date}</span>
               </div>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-sm text-neutral-600 dark:text-neutral-300 break-words">{item.content}</span>
+                <span className="text-sm text-slate-600 break-words">{item.content}</span>
                 <span className="font-bold shrink-0">{item.amount.toLocaleString()}円</span>
               </div>
             </div>
@@ -138,7 +138,7 @@ export default function ReimburseTab() {
       </div>
 
       {modalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setModalOpen(false)}>
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setModalOpen(false)}>
           <form className="card w-full max-w-sm" onClick={(e) => e.stopPropagation()} onSubmit={onSubmit}>
             <h3 className="font-bold mb-3">新しく立替を入力</h3>
             <div className="mb-3">

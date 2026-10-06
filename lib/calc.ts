@@ -231,14 +231,29 @@ export function computeDashboard(
   let pool = INITIAL_POOL;
   let savings = INITIAL_SAVINGS;
 
+  // 対象月の前月末残高を求めつつ、対象年の1〜12月(基準月以降)の月別推移も集める
+  const history: DashboardData['history'] = [];
+  const yearEnd = new Date(target.getFullYear(), 11, 1);
+  let prevPool = pool;
+  let prevSavings = savings;
+
   let cursor = base;
-  while (cursor < target) {
+  while (cursor <= yearEnd) {
     const mk = monthKey(cursor);
+    if (cursor.getTime() === target.getTime()) {
+      prevPool = pool;
+      prevSavings = savings;
+    }
     const m = summarizeMonth(allTransactions, allBudget, allFixedVariable, mk);
     pool = pool + m.surplus + m.bankIncome;
     savings = savings + m.savingsActual;
+    if (cursor.getFullYear() === target.getFullYear()) {
+      history.push({ month: mk, net: m.surplus + m.bankIncome, balance: pool + savings });
+    }
     cursor = addMonths(cursor, 1);
   }
+  pool = prevPool;
+  savings = prevSavings;
 
   const current = summarizeMonth(allTransactions, allBudget, allFixedVariable, monthStr);
 
@@ -273,6 +288,7 @@ export function computeDashboard(
     spendByPerson: current.spendByPerson,
     savingsActual: current.savingsActual,
     personSettlement,
+    history,
   };
 }
 

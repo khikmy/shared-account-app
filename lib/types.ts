@@ -67,4 +67,6 @@ export interface DashboardData {
   spendByPerson: Record<string, number>;
   savingsActual: number;
   personSettlement: { person: string; deposit: number; spent: number; net: number }[];
+  /** 対象年の1〜12月(基準月以降)の月別の収支(積立貯金を除く)と月末の共有口座残高 */
+  history: { month: string; net: number; balance: number }[];
 }

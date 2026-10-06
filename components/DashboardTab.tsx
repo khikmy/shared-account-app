@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { getDashboard } from '@/app/actions';
 import { formatYen } from '@/lib/calc';
 import type { DashboardData } from '@/lib/types';
+import LineChart from './LineChart';
 import { useToast } from './ToastContext';
 
 const CATEGORY_DISPLAY_ORDER = [
@@ -43,7 +44,7 @@ export default function DashboardTab({ month }: { month: string }) {
   }, [month, showToast]);
 
   if (loading && !data) {
-    return <div className="card text-center text-neutral-400">読み込み中...</div>;
+    return <div className="card text-center text-slate-400">読み込み中...</div>;
   }
   if (!data) return null;
 
@@ -53,6 +54,10 @@ export default function DashboardTab({ month }: { month: string }) {
     { label: '積立貯金', value: data.savingsActual },
     { label: '共有口座残高', value: data.accountBalance },
   ];
+
+  const year = month.slice(0, 4);
+  const yearMonths = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
+  const subtitle = `${year}年の1〜12月を表示しています(対象月: ${year}年${Number(month.slice(5))}月)`;
 
   const catRows = [...data.byCategory].sort((a, b) => {
     let ai = CATEGORY_DISPLAY_ORDER.indexOf(a.category);
@@ -68,8 +73,8 @@ export default function DashboardTab({ month }: { month: string }) {
       <div className="card">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {cards.map((c) => (
-            <div key={c.label} className="p-3 border border-neutral-200 dark:border-neutral-800 rounded-lg text-center">
-              <div className="text-xs text-neutral-500">{c.label}</div>
+            <div key={c.label} className="p-3 border border-slate-200 rounded-lg text-center">
+              <div className="text-xs text-slate-500">{c.label}</div>
               <div
                 className={`text-lg font-bold ${
                   c.signed ? (c.value >= 0 ? 'text-green-600' : 'text-red-500') : ''
@@ -88,7 +93,7 @@ export default function DashboardTab({ month }: { month: string }) {
           {data.personSettlement.map((p) => (
             <div
               key={p.person}
-              className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4"
+              className="rounded-lg border border-slate-200 p-4"
             >
               <div className="flex items-center justify-between mb-3">
                 <span className={personBadgeClass(p.person)}>{p.person}</span>
@@ -98,32 +103,58 @@ export default function DashboardTab({ month }: { month: string }) {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <div className="text-xs text-neutral-500 mb-1">入金予定額</div>
+                  <div className="text-xs text-slate-500 mb-1">入金予定額</div>
                   <div className="text-base font-bold">{formatYen(p.deposit)}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-neutral-500 mb-1">支出実績</div>
+                  <div className="text-xs text-slate-500 mb-1">支出実績</div>
                   <div className="text-base font-bold">{formatYen(p.spent)}</div>
                 </div>
               </div>
             </div>
           ))}
         </div>
-        <p className="text-xs text-neutral-500 mt-3">
+        <p className="text-xs text-slate-500 mt-3">
           入金予定額は固定ルールで自動計算されます(こうへい:¥200,000、みどり:予算合計−こうへいの額)。
         </p>
       </div>
 
       <div className="card">
+        <h2 className="font-bold">共有口座残高の推移</h2>
+        <p className="text-xs text-slate-500 mb-2">{subtitle}</p>
+        <LineChart
+          months={yearMonths}
+          highlightMonth={month}
+          label="共有口座残高の推移"
+          series={[
+            { name: '共有口座残高', color: '#2563eb', axis: 'left', points: data.history.map((h) => ({ month: h.month, value: h.balance })) },
+          ]}
+        />
+      </div>
+
+      <div className="card">
+        <h2 className="font-bold">今月の収支の推移</h2>
+        <p className="text-xs text-slate-500 mb-2">{subtitle}</p>
+        <LineChart
+          months={yearMonths}
+          highlightMonth={month}
+          label="今月の収支の推移"
+          series={[
+            { name: '今月の収支', color: '#22c55e', axis: 'left', points: data.history.map((h) => ({ month: h.month, value: h.net })) },
+          ]}
+        />
+      </div>
+
+      <div className="card">
         <h2 className="font-bold mb-3">分類別 予算対比</h2>
         {catRows.length === 0 && (
-          <p className="text-center text-neutral-400 py-4">データがありません</p>
+          <p className="text-center text-slate-400 py-4">データがありません</p>
         )}
         <div className="space-y-3">
           {catRows.map((c) => (
             <div
               key={c.category}
-              className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4"
+              className="rounded-lg border border-slate-200 p-4"
             >
               <div className="flex items-center justify-between gap-2 mb-3">
                 <span className="font-bold">{c.category}</span>
@@ -131,15 +162,15 @@ export default function DashboardTab({ month }: { month: string }) {
               </div>
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div>
-                  <div className="text-xs text-neutral-500 mb-1">予算</div>
+                  <div className="text-xs text-slate-500 mb-1">予算</div>
                   <div className="font-bold">{formatYen(c.budget)}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-neutral-500 mb-1">実績</div>
+                  <div className="text-xs text-slate-500 mb-1">実績</div>
                   <div className="font-bold">{formatYen(c.actual)}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-neutral-500 mb-1">差引</div>
+                  <div className="text-xs text-slate-500 mb-1">差引</div>
                   <div className={`font-bold ${c.diff >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                     {formatYen(c.diff)}
                   </div>

@@ -125,21 +125,21 @@ export default function TransactionsSubTab({ month }: { month: string }) {
         </button>
       </div>
 
-      <div className="p-2 border border-neutral-200 dark:border-neutral-800 rounded-lg bg-neutral-50 dark:bg-neutral-950 text-center mb-3">
-        <div className="text-xs text-neutral-500">分類合計金額</div>
+      <div className="p-2 border border-slate-200 rounded-lg bg-slate-50 text-center mb-3">
+        <div className="text-xs text-slate-500">分類合計金額</div>
         <div className="text-lg font-bold text-primary">{formatYen(total)}</div>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-3">
         {['食費', '消耗品費', '交際費'].map((c) => (
-          <div key={c} className="p-2 border border-neutral-200 dark:border-neutral-800 rounded-lg bg-neutral-50 dark:bg-neutral-950 text-center flex-1 min-w-[80px]">
-            <div className="text-xs text-neutral-500">{c}</div>
+          <div key={c} className="p-2 border border-slate-200 rounded-lg bg-slate-50 text-center flex-1 min-w-[80px]">
+            <div className="text-xs text-slate-500">{c}</div>
             <div className="font-bold">{formatYen(categoryTotals[c])}</div>
           </div>
         ))}
-        <div className="p-2 border border-neutral-200 dark:border-neutral-800 rounded-lg bg-neutral-50 dark:bg-neutral-950 text-center flex-1 min-w-[80px]">
-          <div className="text-xs text-neutral-500">銀行</div>
-          <div className="font-bold text-neutral-500">{formatYen(-bankTotal)}</div>
+        <div className="p-2 border border-slate-200 rounded-lg bg-slate-50 text-center flex-1 min-w-[80px]">
+          <div className="text-xs text-slate-500">銀行</div>
+          <div className="font-bold text-slate-500">{formatYen(-bankTotal)}</div>
         </div>
       </div>
 
@@ -170,17 +170,17 @@ export default function TransactionsSubTab({ month }: { month: string }) {
       </div>
 
       {!loading && rows.length === 0 && (
-        <p className="text-center text-neutral-400 py-4">取引がありません</p>
+        <p className="text-center text-slate-400 py-4">取引がありません</p>
       )}
       <div className="space-y-3">
         {rows.map((r) => (
-          <div key={r.id} className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4">
+          <div key={r.id} className="rounded-lg border border-slate-200 p-4">
             <div className="flex items-center justify-between gap-2 mb-2">
               <span className={personBadgeClass(r.person)}>{r.person}</span>
-              <span className="text-xs text-neutral-500">{r.date}</span>
+              <span className="text-xs text-slate-500">{r.date}</span>
             </div>
             <div className="flex items-center justify-between gap-2 mb-3">
-              <span className="text-sm text-neutral-600 dark:text-neutral-300">{r.category}</span>
+              <span className="text-sm text-slate-600">{r.category}</span>
               <span className="font-bold">
                 {r.person === BANK_PERSON && (
                   <span className={`text-xs mr-2 ${r.amount < 0 ? 'text-red-500' : 'text-green-600'}`}>
@@ -191,7 +191,7 @@ export default function TransactionsSubTab({ month }: { month: string }) {
               </span>
             </div>
             {r.memo && (
-              <div className="text-sm text-neutral-500 mb-3 break-words">{r.memo}</div>
+              <div className="text-sm text-slate-500 mb-3 break-words">{r.memo}</div>
             )}
             <div className="flex gap-2 justify-end">
               <button className="btn-outline text-xs" onClick={() => openEdit(r)}>
@@ -206,7 +206,7 @@ export default function TransactionsSubTab({ month }: { month: string }) {
       </div>
 
       {modalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setModalOpen(false)}>
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setModalOpen(false)}>
           <form
             className="card w-full max-w-sm max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}

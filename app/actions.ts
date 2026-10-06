@@ -6,8 +6,10 @@ import { supabase } from '@/lib/supabase';
 import { AUTH_COOKIE, verifyPassword } from '@/lib/auth';
 import {
   BANK_PERSON,
+  BIMONTHLY_CATEGORIES,
   FIXED_CATEGORIES,
   MEDIAN_BUDGET_CATEGORIES,
+  MEDIAN_BUDGET_FROM,
   MEDIAN_BUDGET_START,
   SAVINGS_CATEGORY,
   computeDashboard,
@@ -206,10 +208,8 @@ export async function copyBudgetFromPreviousMonth(monthStr: string): Promise<Bud
   return getBudget(monthStr);
 }
 
-/** MEDIAN_BUDGET_START 以降の月は、ガス・電気・水道・食費日用品の予算を前月までの実績の中央値で上書きする */
-async function applyMedianBudgets(monthStr: string): Promise<void> {
-  if (monthStr < MEDIAN_BUDGET_START) return;
-
+/** 中央値の算出対象分類ごとの月別実績 (食費・日用品は食費・消耗品費・交際費の取引合計) */
+async function getMedianActuals(): Promise<Record<string, Record<string, number>>> {
   const actuals: Record<string, Record<string, number>> = {};
   (await getAllFixedVariableRaw()).forEach((r) => {
     (actuals[r.category] ??= {})[r.target_month] = Number(r.amount);
@@ -222,6 +222,26 @@ async function applyMedianBudgets(monthStr: string): Promise<void> {
     food[m] = (food[m] || 0) + Number(t.amount);
   });
   actuals['食費・日用品'] = food;
+  return actuals;
+}
+
+/** 中央値の算出に使う月別実績の推移 (MEDIAN_BUDGET_FROM から前月まで、月順。2ヶ月に1度の請求の分類は0円の月を除く) */
+export async function getMedianActualTrend(
+  monthStr: string,
+  category: string
+): Promise<{ month: string; amount: number }[]> {
+  const actual = (await getMedianActuals())[category] || {};
+  return Object.entries(actual)
+    .filter(([m, v]) => m >= MEDIAN_BUDGET_FROM && m < monthStr && !(BIMONTHLY_CATEGORIES.includes(category) && v === 0))
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([month, amount]) => ({ month, amount }));
+}
+
+/** MEDIAN_BUDGET_START 以降の月は、ガス・電気・水道・食費日用品の予算を前月までの実績の中央値で上書きする */
+async function applyMedianBudgets(monthStr: string): Promise<void> {
+  if (monthStr < MEDIAN_BUDGET_START) return;
+
+  const actuals = await getMedianActuals();
 
   const current = await getBudget(monthStr);
   const rows = MEDIAN_BUDGET_CATEGORIES.flatMap((category) => {

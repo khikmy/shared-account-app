@@ -30,7 +30,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       <div
         className={`fixed bottom-4 left-1/2 -translate-x-1/2 rounded-lg px-4 py-2 text-sm font-bold text-white shadow-lg transition-opacity ${
           toast.visible ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        } ${toast.isError ? 'bg-red-600' : 'bg-neutral-800'}`}
+        } ${toast.isError ? 'bg-red-600' : 'bg-slate-800'}`}
       >
         {toast.message}
       </div>

@@ -3,37 +3,32 @@
 @tailwind utilities;
 
 :root {
-  --background: #f5f6fa;
-  --foreground: #1f2430;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #14161c;
-    --foreground: #eceef2;
-  }
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  color-scheme: light;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
 
 .card {
-  @apply bg-white dark:bg-neutral-900 rounded-xl shadow-sm p-4 mb-4 border border-neutral-200 dark:border-neutral-800;
+  @apply bg-white rounded-2xl shadow-sm p-5 mb-4 border border-slate-200/80;
 }
 
 .btn {
   @apply inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
 }
 .btn-primary {
-  @apply btn bg-primary text-white hover:bg-indigo-700;
+  @apply btn bg-primary text-white hover:bg-blue-700 active:scale-95;
 }
 .btn-outline {
-  @apply btn border border-primary text-primary hover:bg-indigo-50 dark:hover:bg-indigo-950;
+  @apply btn border border-primary text-primary hover:bg-blue-50;
 }
 .btn-outline-danger {
-  @apply btn border border-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-950;
+  @apply btn border border-red-500 text-red-500 hover:bg-red-50;
 }
 
 .badge {
@@ -46,7 +41,7 @@ body {
   @apply badge bg-kohei;
 }
 .badge-other {
-  @apply badge bg-neutral-500;
+  @apply badge bg-slate-500;
 }
 .badge-fixed {
   @apply badge bg-amber-500 text-black;
@@ -55,11 +50,11 @@ body {
   @apply badge bg-purple-500;
 }
 .badge-savings {
-  @apply badge bg-neutral-500;
+  @apply badge bg-slate-500;
 }
 
 .input {
-  @apply w-full rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary;
+  @apply w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
 }
 
 .table-wrap {
@@ -70,8 +65,8 @@ table.app-table {
   @apply w-full text-sm border-collapse;
 }
 table.app-table th {
-  @apply text-left text-neutral-500 font-bold py-2 border-b border-neutral-200 dark:border-neutral-800 whitespace-nowrap;
+  @apply text-left text-slate-500 font-bold py-2 border-b border-slate-200 whitespace-nowrap;
 }
 table.app-table td {
-  @apply py-2 border-b border-neutral-100 dark:border-neutral-800 align-middle;
+  @apply py-2 border-b border-slate-100 align-middle;
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { copyBudgetFromPreviousMonth, deleteBudgetItem, getBudget, setBudgetItem } from '@/app/actions';
 import { formatYen, isMedianBudgetLocked, sortByDisplayOrder } from '@/lib/calc';
 import type { BudgetItem, BudgetType } from '@/lib/types';
+import MedianTrendChart from './MedianTrendChart';
 import { useToast } from './ToastContext';
 
 function typeBadgeClass(type: string) {
@@ -19,6 +20,7 @@ export default function BudgetTab({ month }: { month: string }) {
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState<number>(0);
   const [savingCopy, setSavingCopy] = useState(false);
+  const [chartCategory, setChartCategory] = useState<string | null>(null);
   const showToast = useToast();
 
   const [newCategory, setNewCategory] = useState('');
@@ -105,13 +107,13 @@ export default function BudgetTab({ month }: { month: string }) {
         </div>
       </div>
 
-      <div className="p-2 border border-neutral-200 dark:border-neutral-800 rounded-lg bg-neutral-50 dark:bg-neutral-950 text-center mb-3">
-        <div className="text-xs text-neutral-500">予算合計</div>
+      <div className="p-2 border border-slate-200 rounded-lg bg-slate-50 text-center mb-3">
+        <div className="text-xs text-slate-500">予算合計</div>
         <div className="text-lg font-bold text-primary">{formatYen(total)}</div>
       </div>
 
       {showForm && (
-        <form onSubmit={onAddSubmit} className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-3 mb-3 bg-neutral-50 dark:bg-neutral-950 space-y-3">
+        <form onSubmit={onAddSubmit} className="border border-slate-200 rounded-lg p-3 mb-3 bg-slate-50 space-y-3">
           <div>
             <label className="text-sm font-bold block mb-1">分類名</label>
             <input className="input" placeholder="例: 家賃" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} required />
@@ -144,14 +146,14 @@ export default function BudgetTab({ month }: { month: string }) {
       )}
 
       {!loading && rows.length === 0 && (
-        <p className="text-center text-neutral-400 py-4">この月の予算はまだ設定されていません</p>
+        <p className="text-center text-slate-400 py-4">この月の予算はまだ設定されていません</p>
       )}
       <div className="space-y-3">
         {rows.map((r) => {
           const isEditing = editingCategory === r.category;
           const locked = isMedianBudgetLocked(month, r.category);
           return (
-            <div key={r.category} className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4">
+            <div key={r.category} className="rounded-lg border border-slate-200 p-4">
               <div className="flex items-center justify-between gap-2 mb-3">
                 <span className="font-bold">{r.category}</span>
                 <span className={typeBadgeClass(r.type)}>{r.type}</span>
@@ -179,7 +181,12 @@ export default function BudgetTab({ month }: { month: string }) {
                     </button>
                   </div>
                 ) : locked ? (
-                  <span className="text-xs text-neutral-500 shrink-0">実績の中央値で自動算出</span>
+                  <button
+                    className="btn-outline text-xs shrink-0"
+                    onClick={() => setChartCategory(r.category)}
+                  >
+                    実績の中央値で自動算出
+                  </button>
                 ) : (
                   <div className="flex gap-2 shrink-0">
                     <button className="btn-outline-danger text-xs" onClick={() => onDelete(r.category)}>
@@ -201,6 +208,18 @@ export default function BudgetTab({ month }: { month: string }) {
           );
         })}
       </div>
+
+      {chartCategory && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setChartCategory(null)}>
+          <div className="card w-full max-w-sm max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-bold">{chartCategory}の実績の推移</h3>
+            <MedianTrendChart month={month} category={chartCategory} />
+            <button className="btn-outline w-full mt-3" onClick={() => setChartCategory(null)}>
+              閉じる
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
