@@ -57,7 +57,7 @@ export default function DashboardTab({ month }: { month: string }) {
 
   const year = month.slice(0, 4);
   const yearMonths = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
-  const subtitle = `${year}年の1〜12月を表示しています(対象月: ${year}年${Number(month.slice(5))}月)`;
+  const subtitle = `${year}年の1〜12月を表示しています(対象月: ${year}年${Number(month.slice(5))}月)。対象月より後は、対象月までの実績の中央値による予測です`;
 
   const catRows = [...data.byCategory].sort((a, b) => {
     let ai = CATEGORY_DISPLAY_ORDER.indexOf(a.category);

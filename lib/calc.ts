@@ -236,6 +236,8 @@ export function computeDashboard(
   const yearEnd = new Date(target.getFullYear(), 11, 1);
   let prevPool = pool;
   let prevSavings = savings;
+  const actualNets: number[] = [];
+  const actualDeltas: number[] = [];
 
   let cursor = base;
   while (cursor <= yearEnd) {
@@ -245,12 +247,30 @@ export function computeDashboard(
       prevSavings = savings;
     }
     const m = summarizeMonth(allTransactions, allBudget, allFixedVariable, mk);
+    const before = pool + savings;
     pool = pool + m.surplus + m.bankIncome;
     savings = savings + m.savingsActual;
+    if (mk >= MEDIAN_BUDGET_FROM && mk <= monthStr) {
+      actualNets.push(m.surplus + m.bankIncome);
+      actualDeltas.push(pool + savings - before);
+    }
     if (cursor.getFullYear() === target.getFullYear()) {
       history.push({ month: mk, net: m.surplus + m.bankIncome, balance: pool + savings });
     }
     cursor = addMonths(cursor, 1);
+  }
+
+  // 対象月より後は、対象月までの実績の中央値で推移を延長する
+  if (actualDeltas.length > 0) {
+    const medianNet = median(actualNets);
+    const medianDelta = median(actualDeltas);
+    let projected = history.find((h) => h.month === monthStr)?.balance ?? 0;
+    history.forEach((h) => {
+      if (h.month <= monthStr) return;
+      projected += medianDelta;
+      h.net = medianNet;
+      h.balance = projected;
+    });
   }
   pool = prevPool;
   savings = prevSavings;
