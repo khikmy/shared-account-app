@@ -1,0 +1,279 @@
+<title>残高予測シミュレーター</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+/* 左に入力、右に結果の2カラム。狭い幅では縦積み。数値は等幅、見出しはゴシック */
+:root {
+  --bg: #f6f8fb;
+  --surface: #ffffff;
+  --fg: #172033;
+  --muted: #5d6b82;
+  --line: #dde3ec;
+  --accent: #2563eb;
+  --accent-soft: #e3ecfd;
+  --proj: #d97706;
+  --good: #15803d;
+  --bad: #b91c1c;
+  --font-body: 'Noto Sans JP', system-ui, -apple-system, 'Hiragino Sans', 'Yu Gothic', sans-serif;
+  --font-num: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1522; --surface: #151e2f; --fg: #e6ebf5; --muted: #93a1ba; --line: #26324a;
+    --accent: #6c9bff; --accent-soft: #1c2c4f; --proj: #f0a43a; --good: #4ade80; --bad: #f87171;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1522; --surface: #151e2f; --fg: #e6ebf5; --muted: #93a1ba; --line: #26324a;
+  --accent: #6c9bff; --accent-soft: #1c2c4f; --proj: #f0a43a; --good: #4ade80; --bad: #f87171;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; line-height: 1.7;
+  padding-block: 24px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1040px; margin: 0 auto; display: grid; gap: 16px; }
+h1 { font-size: 20px; margin: 0; text-wrap: balance; }
+h2 { font-size: 14px; margin: 0 0 10px; }
+.lead { color: var(--muted); margin: 4px 0 0; max-width: 65ch; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; min-width: 0; }
+.formula { font-family: var(--font-num); font-size: 13px; line-height: 1.9; background: var(--accent-soft); border-radius: 6px; padding: 12px 14px; overflow-x: auto; }
+.formula b { color: var(--accent); font-weight: 500; }
+.cols { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 760px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+label { display: grid; gap: 2px; font-size: 12px; color: var(--muted); }
+input { font: inherit; font-family: var(--font-num); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; width: 100%; min-width: 0; }
+input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.row3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+.hist { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.hist th { text-align: left; font-size: 11px; font-weight: 500; color: var(--muted); padding: 0 4px 4px; }
+.hist td { padding: 2px 4px; }
+.hist td:first-child { font-family: var(--font-num); font-size: 12px; color: var(--muted); white-space: nowrap; }
+.hist input { padding: 3px 6px; font-size: 12px; text-align: right; }
+.tag { display: inline-block; font-size: 11px; color: var(--proj); border: 1px solid var(--proj); border-radius: 4px; padding: 0 6px; margin-left: 6px; font-weight: 500; vertical-align: 1px; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+.stat { border-top: 2px solid var(--line); padding-top: 6px; }
+.stat span { display: block; font-size: 11px; color: var(--muted); }
+.stat strong { font-family: var(--font-num); font-weight: 500; font-size: 17px; }
+.chart { width: 100%; height: auto; display: block; }
+.chart text { fill: var(--muted); font-family: var(--font-num); font-size: 10px; }
+.scroll { overflow-x: auto; }
+table.out { width: 100%; border-collapse: collapse; font-family: var(--font-num); font-size: 12px; font-variant-numeric: tabular-nums; }
+table.out th { text-align: right; font-weight: 500; color: var(--muted); padding: 4px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.out td { text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.out th:first-child, table.out td:first-child { text-align: left; }
+tr.is-proj td { color: var(--proj); }
+tr.is-target td { font-weight: 500; background: var(--accent-soft); }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 6px; }
+.legend i { display: inline-block; width: 18px; height: 3px; vertical-align: middle; margin-right: 5px; border-radius: 2px; }
+.note { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>残高予測シミュレーター</h1>
+    <p class="lead">対象月までの実績の中央値で、対象月より後の共有口座残高を延長する式を確認するページです。初期値は例の数字です。実際の数字に書き換えて試してください。</p>
+  </header>
+
+  <section class="panel">
+    <h2>算出式</h2>
+    <div class="formula">
+      medianNet = <b>median</b>(各月の収支)　<span style="color:var(--muted)">※ surplus + bankIncome</span><br>
+      medianSav = <b>median</b>(各月の積立貯金実績)　<span style="color:var(--muted)">※ savingsActual</span><br>
+      残高[対象月] = 実績どおり<br>
+      残高[k] = 残高[k-1] + <b>medianNet</b> + <b>medianSav</b>　(k = 対象月の翌月〜)
+    </div>
+    <p class="note">中央値の期間は 2025-12 〜 対象月。偶数件のときは中央2件の平均です。</p>
+  </section>
+
+  <div class="cols">
+    <section class="panel">
+      <h2>入力<span class="tag">例の数字</span></h2>
+      <div class="row3">
+        <label for="target">対象月<input id="target" type="month" value="2026-10"></label>
+        <label for="balance">対象月の残高<input id="balance" type="number" step="1000" value="172273"></label>
+        <label for="horizon">予測月数<input id="horizon" type="number" min="1" max="24" value="12"></label>
+      </div>
+      <h2 style="margin-top:4px">月別の実績</h2>
+      <table class="hist">
+        <thead><tr><th>月</th><th>収支</th><th>積立貯金</th></tr></thead>
+        <tbody id="hist"></tbody>
+      </table>
+    </section>
+
+    <section class="panel">
+      <h2>結果</h2>
+      <div class="stats">
+        <div class="stat"><span>収支の中央値</span><strong id="sNet">-</strong></div>
+        <div class="stat"><span>積立貯金の中央値</span><strong id="sSav">-</strong></div>
+        <div class="stat"><span>毎月の加算額</span><strong id="sAdd">-</strong></div>
+      </div>
+      <svg id="chart" class="chart" viewBox="0 0 640 260" role="img" aria-label="共有口座残高の推移と予測"></svg>
+      <div class="legend">
+        <span><i style="background:var(--accent)"></i>実績</span>
+        <span><i style="background:var(--proj)"></i>予測</span>
+      </div>
+      <div class="scroll" style="margin-top:12px">
+        <table class="out">
+          <thead><tr><th>月</th><th>収支</th><th>積立貯金</th><th>共有口座残高</th></tr></thead>
+          <tbody id="out"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+(function () {
+  var SAMPLE = [
+    [38200, 30000], [21400, 30000], [-9800, 30000], [15600, 30000], [26300, 30000], [8700, 30000],
+    [33100, 30000], [12900, 20000], [19500, 30000], [-4200, 30000], [22800, 30000]
+  ];
+  var $ = function (id) { return document.getElementById(id); };
+  var yen = function (n) {
+    var v = Math.round(n);
+    return (v < 0 ? '-' : '') + '¥' + Math.abs(v).toLocaleString('ja-JP');
+  };
+  function median(a) {
+    if (!a.length) return 0;
+    var s = a.slice().sort(function (x, y) { return x - y; });
+    var m = Math.floor(s.length / 2);
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  }
+  function addMonth(ym, n) {
+    var p = ym.split('-').map(Number);
+    var d = new Date(p[0], p[1] - 1 + n, 1);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  }
+  function monthsBack(ym, count) {
+    var r = [];
+    for (var i = count - 1; i >= 0; i--) r.push(addMonth(ym, -i));
+    return r;
+  }
+
+  var hist = {}; // 月 -> {net, sav}
+  var FROM = '2025-12';
+
+  function buildHistRows() {
+    var target = $('target').value || '2026-10';
+    var months = monthsBack(target, SAMPLE.length).filter(function (m) { return m >= FROM; });
+    var body = $('hist');
+    body.innerHTML = '';
+    months.forEach(function (m, i) {
+      if (!hist[m]) {
+        var s = SAMPLE[i] || [0, 0];
+        hist[m] = { net: s[0], sav: s[1] };
+      }
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + m + '</td>' +
+        '<td><input type="number" step="100" data-m="' + m + '" data-k="net" value="' + hist[m].net + '" aria-label="' + m + ' の収支"></td>' +
+        '<td><input type="number" step="100" data-m="' + m + '" data-k="sav" value="' + hist[m].sav + '" aria-label="' + m + ' の積立貯金"></td>';
+      body.appendChild(tr);
+    });
+    return months;
+  }
+
+  function render() {
+    var target = $('target').value || '2026-10';
+    var months = buildHistRows();
+    var bal0 = Number($('balance').value) || 0;
+    var horizon = Math.max(1, Math.min(24, Number($('horizon').value) || 12));
+
+    var nets = months.map(function (m) { return hist[m].net; });
+    var savs = months.map(function (m) { return hist[m].sav; });
+    var mNet = median(nets), mSav = median(savs), add = mNet + mSav;
+
+    $('sNet').textContent = yen(mNet);
+    $('sSav').textContent = yen(mSav);
+    $('sAdd').textContent = yen(add);
+
+    // 対象月までは実績、その後は前月残高に毎月 add を足す
+    // 実績側の残高は対象月の残高から逆算(収支+積立貯金を引いていく)
+    var rows = [];
+    var b = bal0;
+    var past = [];
+    for (var i = months.length - 1; i >= 0; i--) {
+      past.unshift({ m: months[i], net: hist[months[i]].net, sav: hist[months[i]].sav, bal: b, proj: false, target: i === months.length - 1 });
+      b -= hist[months[i]].net + hist[months[i]].sav;
+    }
+    rows = past;
+    var cur = bal0;
+    for (var k = 1; k <= horizon; k++) {
+      cur += add;
+      rows.push({ m: addMonth(target, k), net: mNet, sav: mSav, bal: cur, proj: true, target: false });
+    }
+
+    var out = $('out');
+    out.innerHTML = '';
+    rows.forEach(function (r) {
+      var tr = document.createElement('tr');
+      tr.className = r.target ? 'is-target' : (r.proj ? 'is-proj' : '');
+      tr.innerHTML = '<td>' + r.m + (r.target ? ' (対象月)' : '') + '</td><td>' + yen(r.net) + '</td><td>' + yen(r.sav) + '</td><td>' + yen(r.bal) + '</td>';
+      out.appendChild(tr);
+    });
+    drawChart(rows);
+  }
+
+  function drawChart(rows) {
+    var W = 640, H = 260, L = 64, R = 14, T = 14, B = 30;
+    var vals = rows.map(function (r) { return r.bal; });
+    var lo = Math.min.apply(null, vals.concat(0)), hi = Math.max.apply(null, vals);
+    var span = hi - lo || 1;
+    var step = Math.pow(10, Math.floor(Math.log10(span / 4)));
+    var nice = [1, 2, 2.5, 5, 10].map(function (f) { return f * step; }).filter(function (s) { return span / s <= 5; })[0] || step * 10;
+    var y0 = Math.floor(lo / nice) * nice, y1 = Math.ceil(hi / nice) * nice;
+    var x = function (i) { return L + (rows.length === 1 ? 0 : i * (W - L - R) / (rows.length - 1)); };
+    var y = function (v) { return T + (y1 - v) * (H - T - B) / (y1 - y0); };
+    var svg = '';
+    for (var t = y0; t <= y1 + 1e-6; t += nice) {
+      svg += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(t) + '" y2="' + y(t) + '" stroke="var(--line)" stroke-width="1"/>';
+      svg += '<text x="' + (L - 6) + '" y="' + (y(t) + 3) + '" text-anchor="end">' + (Math.abs(t) >= 10000 ? (t / 10000) + '万' : t) + '</text>';
+    }
+    var ti = rows.findIndex(function (r) { return r.target; });
+    var pts = function (a, b2) {
+      var s = [];
+      for (var i = a; i <= b2; i++) s.push(x(i).toFixed(1) + ',' + y(rows[i].bal).toFixed(1));
+      return s.join(' ');
+    };
+    svg += '<line x1="' + x(ti) + '" x2="' + x(ti) + '" y1="' + T + '" y2="' + (H - B) + '" stroke="var(--bad)" stroke-width="1" stroke-dasharray="4 3"/>';
+    svg += '<text x="' + x(ti) + '" y="' + (T - 3) + '" text-anchor="middle" style="fill:var(--bad)">対象月</text>';
+    svg += '<polyline fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" points="' + pts(0, ti) + '"/>';
+    if (ti < rows.length - 1) svg += '<polyline fill="none" stroke="var(--proj)" stroke-width="2.5" stroke-linejoin="round" stroke-dasharray="6 4" points="' + pts(ti, rows.length - 1) + '"/>';
+    rows.forEach(function (r, i) {
+      svg += '<circle cx="' + x(i) + '" cy="' + y(r.bal) + '" r="3" fill="' + (r.proj ? 'var(--proj)' : 'var(--accent)') + '"/>';
+    });
+    var every = Math.ceil(rows.length / 8);
+    rows.forEach(function (r, i) {
+      if (i % every === 0 || i === rows.length - 1) svg += '<text x="' + x(i) + '" y="' + (H - 10) + '" text-anchor="middle">' + r.m.slice(2).replace('-', '/') + '</text>';
+    });
+    $('chart').innerHTML = svg;
+  }
+
+  document.addEventListener('input', function (e) {
+    var el = e.target;
+    if (el.dataset && el.dataset.m) {
+      hist[el.dataset.m][el.dataset.k] = Number(el.value) || 0;
+      renderKeepFocus(el);
+    } else if (el.id === 'target' || el.id === 'balance' || el.id === 'horizon') {
+      render();
+    }
+  });
+  // 表の入力中は行を作り直さず、結果だけ更新する
+  function renderKeepFocus() {
+    var target = $('target').value || '2026-10';
+    var months = monthsBack(target, SAMPLE.length).filter(function (m) { return m >= FROM; });
+    var saved = document.activeElement;
+    var id = saved && saved.dataset ? [saved.dataset.m, saved.dataset.k] : null;
+    render();
+    if (id) {
+      var el = document.querySelector('input[data-m="' + id[0] + '"][data-k="' + id[1] + '"]');
+      if (el) { el.focus(); var v = el.value; el.value = ''; el.value = v; }
+    }
+  }
+  render();
+})();
+</script>

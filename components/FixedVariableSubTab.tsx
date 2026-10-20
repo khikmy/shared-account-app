@@ -18,7 +18,7 @@ function personBadgeClass(person: string) {
   return 'badge-other';
 }
 
-export default function FixedVariableSubTab({ month }: { month: string }) {
+export default function FixedVariableSubTab({ month, refreshKey = 0 }: { month: string; refreshKey?: number }) {
   const [rows, setRows] = useState<FixedVariableRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [people, setPeople] = useState<string[]>([]);
@@ -42,7 +42,7 @@ export default function FixedVariableSubTab({ month }: { month: string }) {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month]);
+  }, [month, refreshKey]);
 
   const totalBudget = rows.reduce((sum, r) => sum + Number(r.budget || 0), 0);
   const totalActual = rows.reduce((sum, r) => sum + Number(r.actual || 0), 0);

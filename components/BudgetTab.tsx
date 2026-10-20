@@ -13,7 +13,7 @@ function typeBadgeClass(type: string) {
   return 'badge-savings';
 }
 
-export default function BudgetTab({ month }: { month: string }) {
+export default function BudgetTab({ month, onCopied }: { month: string; onCopied?: () => void }) {
   const [rows, setRows] = useState<BudgetItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -84,8 +84,9 @@ export default function BudgetTab({ month }: { month: string }) {
     setSavingCopy(true);
     try {
       const rs = await copyBudgetFromPreviousMonth(month);
-      showToast('前月の予算をコピーしました');
+      showToast('前月の予算と固定費・変動費の実績をコピーしました');
       setRows(sortByDisplayOrder(rs));
+      onCopied?.();
     } catch (err) {
       showToast('エラー: ' + (err as Error).message, true);
     } finally {

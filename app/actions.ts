@@ -204,8 +204,35 @@ export async function copyBudgetFromPreviousMonth(monthStr: string): Promise<Bud
     if (error) throw new Error(error.message);
   }
   await applyMedianBudgets(monthStr);
+  await copyFixedVariableActualsFromPreviousMonth(prevMonth, monthStr);
   revalidatePath('/');
   return getBudget(monthStr);
+}
+
+/** 前月の固定費・変動費の実績と対象者を、未入力の分類についてコピーする (食費・日用品は自動計算のため除く) */
+async function copyFixedVariableActualsFromPreviousMonth(prevMonth: string, monthStr: string): Promise<void> {
+  const [prevRes, currentRes] = await Promise.all([
+    supabase.from('fixed_variable_actuals').select('*').eq('target_month', prevMonth),
+    supabase.from('fixed_variable_actuals').select('category').eq('target_month', monthStr),
+  ]);
+  if (prevRes.error) throw new Error(prevRes.error.message);
+  if (currentRes.error) throw new Error(currentRes.error.message);
+
+  const existing = new Set((currentRes.data || []).map((r: { category: string }) => r.category));
+  const toInsert = ((prevRes.data || []) as FixedVariableActual[])
+    .filter((r) => r.category !== '食費・日用品' && !existing.has(r.category))
+    .map((r) => ({
+      target_month: monthStr,
+      category: r.category,
+      type: r.type,
+      person: r.person,
+      amount: r.amount,
+    }));
+
+  if (toInsert.length > 0) {
+    const { error } = await supabase.from('fixed_variable_actuals').insert(toInsert);
+    if (error) throw new Error(error.message);
+  }
 }
 
 /** 中央値の算出対象分類ごとの月別実績 (食費・日用品は食費・消耗品費・交際費の取引合計) */

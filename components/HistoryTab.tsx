@@ -6,7 +6,7 @@ import FixedVariableSubTab from './FixedVariableSubTab';
 
 type SubTab = 'variable' | 'fixed';
 
-export default function HistoryTab({ month }: { month: string }) {
+export default function HistoryTab({ month, refreshKey = 0 }: { month: string; refreshKey?: number }) {
   const [subTab, setSubTab] = useState<SubTab>('variable');
   const [visitedSubTabs, setVisitedSubTabs] = useState<Set<SubTab>>(() => new Set(['variable']));
 
@@ -43,7 +43,7 @@ export default function HistoryTab({ month }: { month: string }) {
       )}
       {visitedSubTabs.has('fixed') && (
         <div hidden={subTab !== 'fixed'}>
-          <FixedVariableSubTab month={month} />
+          <FixedVariableSubTab month={month} refreshKey={refreshKey} />
         </div>
       )}
     </div>

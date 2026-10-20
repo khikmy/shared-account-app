@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { getDashboard } from '@/app/actions';
-import { formatYen } from '@/lib/calc';
+import { CHART_FROM, formatYen } from '@/lib/calc';
 import type { DashboardData } from '@/lib/types';
 import LineChart from './LineChart';
 import { useToast } from './ToastContext';
@@ -24,7 +24,7 @@ function personBadgeClass(person: string) {
   return 'badge-other';
 }
 
-export default function DashboardTab({ month }: { month: string }) {
+export default function DashboardTab({ month, refreshKey = 0 }: { month: string; refreshKey?: number }) {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const showToast = useToast();
@@ -41,7 +41,7 @@ export default function DashboardTab({ month }: { month: string }) {
     return () => {
       active = false;
     };
-  }, [month, showToast]);
+  }, [month, refreshKey, showToast]);
 
   if (loading && !data) {
     return <div className="card text-center text-slate-400">読み込み中...</div>;
@@ -55,9 +55,11 @@ export default function DashboardTab({ month }: { month: string }) {
     { label: '共有口座残高', value: data.accountBalance },
   ];
 
-  const year = month.slice(0, 4);
-  const yearMonths = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
-  const subtitle = `${year}年の1〜12月を表示しています(対象月: ${year}年${Number(month.slice(5))}月)。対象月より後は、対象月までの実績の中央値による予測です`;
+  const yearMonths = Array.from({ length: 12 }, (_, i) => {
+    const d = new Date(Number(month.slice(0, 4)), Number(month.slice(5)) - 1 - (11 - i), 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }).filter((m) => m >= CHART_FROM);
+  const subtitle = `対象月(${month.slice(0, 4)}年${Number(month.slice(5))}月)から遡って直近1年間(${Number(CHART_FROM.slice(0, 4))}年${Number(CHART_FROM.slice(5))}月以降)を表示しています`;
 
   const catRows = [...data.byCategory].sort((a, b) => {
     let ai = CATEGORY_DISPLAY_ORDER.indexOf(a.category);

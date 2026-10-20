@@ -21,6 +21,8 @@ const TABS: { key: TabKey; label: string }[] = [
 export default function MainApp() {
   const [month, setMonth] = useState(currentMonthStr());
   const [tab, setTab] = useState<TabKey>('dashboard');
+  // 予算の前月コピーなど、他タブの表示に影響する更新があったときに増やし、各タブを再読み込みさせる
+  const [refreshKey, setRefreshKey] = useState(0);
   const [visitedTabs, setVisitedTabs] = useState<Set<TabKey>>(() => new Set(['dashboard']));
 
   function selectTab(key: TabKey) {
@@ -84,17 +86,17 @@ export default function MainApp() {
 
         {visitedTabs.has('dashboard') && (
           <div hidden={tab !== 'dashboard'}>
-            <DashboardTab month={month} />
+            <DashboardTab month={month} refreshKey={refreshKey} />
           </div>
         )}
         {visitedTabs.has('history') && (
           <div hidden={tab !== 'history'}>
-            <HistoryTab month={month} />
+            <HistoryTab month={month} refreshKey={refreshKey} />
           </div>
         )}
         {visitedTabs.has('budget') && (
           <div hidden={tab !== 'budget'}>
-            <BudgetTab month={month} />
+            <BudgetTab month={month} onCopied={() => setRefreshKey((k) => k + 1)} />
           </div>
         )}
         {visitedTabs.has('reimburse') && (

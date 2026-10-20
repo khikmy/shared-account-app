@@ -17,6 +17,8 @@ export const MIDORI_NAME = 'みどり';
 export const KOHEI_FIXED_DEPOSIT = 200000;
 
 export const SAVINGS_CATEGORY = '積立貯金';
+/** ダッシュボードのグラフに表示する最初の月 */
+export const CHART_FROM = '2026-01';
 export const BANK_PERSON = '銀行';
 
 export const FIXED_CATEGORIES = ['食費', '消耗品費', '交際費', '銀行'];
@@ -231,46 +233,26 @@ export function computeDashboard(
   let pool = INITIAL_POOL;
   let savings = INITIAL_SAVINGS;
 
-  // 対象月の前月末残高を求めつつ、対象年の1〜12月(基準月以降)の月別推移も集める
+  // 対象月の前月末残高を求めつつ、対象月から遡って直近1年間(CHART_FROM 以降)の月別推移も集める
   const history: DashboardData['history'] = [];
-  const yearEnd = new Date(target.getFullYear(), 11, 1);
+  const historyFrom = monthStart(CHART_FROM) > addMonths(target, -11) ? monthStart(CHART_FROM) : addMonths(target, -11);
   let prevPool = pool;
   let prevSavings = savings;
-  const actualNets: number[] = [];
-  const actualDeltas: number[] = [];
 
   let cursor = base;
-  while (cursor <= yearEnd) {
+  while (cursor <= target) {
     const mk = monthKey(cursor);
     if (cursor.getTime() === target.getTime()) {
       prevPool = pool;
       prevSavings = savings;
     }
     const m = summarizeMonth(allTransactions, allBudget, allFixedVariable, mk);
-    const before = pool + savings;
     pool = pool + m.surplus + m.bankIncome;
     savings = savings + m.savingsActual;
-    if (mk >= MEDIAN_BUDGET_FROM && mk <= monthStr) {
-      actualNets.push(m.surplus + m.bankIncome);
-      actualDeltas.push(pool + savings - before);
-    }
-    if (cursor.getFullYear() === target.getFullYear()) {
+    if (cursor >= historyFrom) {
       history.push({ month: mk, net: m.surplus + m.bankIncome, balance: pool + savings });
     }
     cursor = addMonths(cursor, 1);
-  }
-
-  // 対象月より後は、対象月までの実績の中央値で推移を延長する
-  if (actualDeltas.length > 0) {
-    const medianNet = median(actualNets);
-    const medianDelta = median(actualDeltas);
-    let projected = history.find((h) => h.month === monthStr)?.balance ?? 0;
-    history.forEach((h) => {
-      if (h.month <= monthStr) return;
-      projected += medianDelta;
-      h.net = medianNet;
-      h.balance = projected;
-    });
   }
   pool = prevPool;
   savings = prevSavings;
