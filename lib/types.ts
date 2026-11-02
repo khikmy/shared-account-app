@@ -7,6 +7,7 @@ export interface Transaction {
   category: string;
   amount: number;
   memo: string;
+  is_wedding: boolean;
 }
 
 export interface BudgetItem {
@@ -33,6 +34,21 @@ export interface Reimbursement {
   content: string;
   amount: number;
   status: '未精算' | '精算済';
+  is_wedding: boolean;
+}
+
+/** 結婚関連の費用(共有口座の支出または立替金)を1本の一覧にまとめた行 */
+export interface WeddingExpense {
+  key: string;
+  source: '共有口座' | '立替金';
+  date: string;
+  person: string;
+  content: string;
+  amount: number;
+  /** 立替金のみ */
+  status?: Reimbursement['status'];
+  /** 共有口座の支出のみ */
+  category?: string;
 }
 
 export interface FixedVariableRow {
