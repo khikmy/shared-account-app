@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getDashboard } from '@/app/actions';
 import { CHART_FROM, formatYen } from '@/lib/calc';
 import type { DashboardData } from '@/lib/types';
@@ -24,12 +24,28 @@ function personBadgeClass(person: string) {
   return 'badge-other';
 }
 
-export default function DashboardTab({ month, refreshKey = 0 }: { month: string; refreshKey?: number }) {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
+export default function DashboardTab({
+  month,
+  refreshKey = 0,
+  initialMonth,
+  initialData = null,
+}: {
+  month: string;
+  refreshKey?: number;
+  initialMonth?: string;
+  initialData?: DashboardData | null;
+}) {
+  const [data, setData] = useState<DashboardData | null>(initialData);
+  const [loading, setLoading] = useState(!initialData);
+  // サーバーで先読みした初回分は再取得しない
+  const skipInitial = useRef(!!initialData && month === initialMonth && refreshKey === 0);
   const showToast = useToast();
 
   useEffect(() => {
+    if (skipInitial.current) {
+      skipInitial.current = false;
+      return;
+    }
     let active = true;
     setLoading(true);
     getDashboard(month)

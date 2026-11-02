@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { currentMonthStr } from '@/lib/calc';
+import type { DashboardData } from '@/lib/types';
 import { logout } from '@/app/actions';
 import { ToastProvider } from './ToastContext';
 import DashboardTab from './DashboardTab';
@@ -25,8 +25,14 @@ const SCREENS: { key: ScreenKey; label: string }[] = [
   { key: 'wedding', label: '結婚費用' },
 ];
 
-export default function MainApp() {
-  const [month, setMonth] = useState(currentMonthStr());
+export default function MainApp({
+  initialMonth,
+  initialDashboard,
+}: {
+  initialMonth: string;
+  initialDashboard: DashboardData | null;
+}) {
+  const [month, setMonth] = useState(initialMonth);
   const [screen, setScreen] = useState<ScreenKey>('account');
   const [menuOpen, setMenuOpen] = useState(false);
   const [reimburseVisited, setReimburseVisited] = useState(false);
@@ -155,7 +161,7 @@ export default function MainApp() {
 
         {visitedTabs.has('dashboard') && (
           <div hidden={tab !== 'dashboard'}>
-            <DashboardTab month={month} refreshKey={refreshKey} />
+            <DashboardTab month={month} refreshKey={refreshKey} initialMonth={initialMonth} initialData={initialDashboard} />
           </div>
         )}
         {visitedTabs.has('history') && (

@@ -51,15 +51,19 @@ export async function logout(): Promise<void> {
 
 // ===================== マスタ =====================
 
-export async function getPeople(): Promise<string[]> {
-  const { data, error } = await supabase.from('transactions').select('person');
-  if (error) throw new Error(error.message);
+function peopleFromTransactions(rows: { person?: string | null }[]): string[] {
   const set = new Set<string>();
-  (data || []).forEach((r) => {
+  rows.forEach((r) => {
     if (r.person && r.person !== BANK_PERSON) set.add(r.person);
   });
   if (set.size === 0) return ['みどり', 'こうへい'];
   return Array.from(set).sort();
+}
+
+export async function getPeople(): Promise<string[]> {
+  const { data, error } = await supabase.from('transactions').select('person');
+  if (error) throw new Error(error.message);
+  return peopleFromTransactions(data || []);
 }
 
 export async function getCategories(): Promise<{ name: string; type: string }[]> {
@@ -554,11 +558,10 @@ export async function getAllTatekaeData(): Promise<
 // ===================== ダッシュボード =====================
 
 export async function getDashboard(monthStr: string) {
-  const [allTransactions, allBudget, allFixedVariable, people] = await Promise.all([
+  const [allTransactions, allBudget, allFixedVariable] = await Promise.all([
     getAllTransactionsRaw(),
     getAllBudgetRaw(),
     getAllFixedVariableRaw(),
-    getPeople(),
   ]);
-  return computeDashboard(monthStr, allTransactions, allBudget, allFixedVariable, people);
+  return computeDashboard(monthStr, allTransactions, allBudget, allFixedVariable, peopleFromTransactions(allTransactions));
 }
