@@ -12,7 +12,7 @@ function personBadgeClass(person: string) {
   return 'badge-other';
 }
 
-const emptyForm = { date: '', person: '', category: '', amount: '' as number | '', memo: '', bankType: '収入' as '収入' | '支出' };
+const emptyForm = { date: '', person: '', category: '', amount: '' as number | '', memo: '', isWedding: false, bankType: '収入' as '収入' | '支出' };
 
 export default function TransactionsSubTab({ month }: { month: string }) {
   const [rows, setRows] = useState<Transaction[]>([]);
@@ -73,6 +73,7 @@ export default function TransactionsSubTab({ month }: { month: string }) {
       category: row.category,
       amount: isBankExpense ? -row.amount : row.amount,
       memo: row.memo || '',
+      isWedding: !!row.is_wedding,
       bankType: isBankExpense ? '支出' : '収入',
     });
     setModalOpen(true);
@@ -88,6 +89,7 @@ export default function TransactionsSubTab({ month }: { month: string }) {
       // 銀行は収入をプラス、支出をマイナスで保存する(集計は単純合算で収支に反映される)
       amount: form.person === BANK_PERSON && form.bankType === '支出' ? -Number(form.amount) : Number(form.amount),
       memo: form.memo,
+      isWedding: form.category === '交際費' && form.isWedding,
     };
     try {
       if (editId) {
@@ -177,7 +179,10 @@ export default function TransactionsSubTab({ month }: { month: string }) {
           <div key={r.id} className="rounded-lg border border-slate-200 p-4">
             <div className="flex items-center justify-between gap-2 mb-2">
               <span className={personBadgeClass(r.person)}>{r.person}</span>
-              <span className="text-xs text-slate-500">{r.date}</span>
+              <span className="flex items-center gap-2">
+                {r.is_wedding && <span className="text-xs rounded-full px-2 py-0.5 bg-pink-50 text-pink-600 font-semibold">結婚</span>}
+                <span className="text-xs text-slate-500">{r.date}</span>
+              </span>
             </div>
             <div className="flex items-center justify-between gap-2 mb-3">
               <span className="text-sm text-slate-600">{r.category}</span>
@@ -276,6 +281,12 @@ export default function TransactionsSubTab({ month }: { month: string }) {
               <label className="text-sm font-bold block mb-1">メモ</label>
               <input className="input" placeholder="任意" value={form.memo} onChange={(e) => setForm({ ...form, memo: e.target.value })} />
             </div>
+            {form.category === '交際費' && (
+              <label className="flex items-center gap-2 text-sm mb-3">
+                <input type="checkbox" checked={form.isWedding} onChange={(e) => setForm({ ...form, isWedding: e.target.checked })} />
+                結婚関連の費用
+              </label>
+            )}
             <button type="submit" className="btn-primary w-full">
               {editId ? '更新する' : '追加する'}
             </button>

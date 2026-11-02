@@ -1,11 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { addTatekae, getAllTatekaeData, getTatekaeData, settleAll } from '@/app/actions';
+import {
+  addTatekae,
+  deleteReimbursement,
+  getAllTatekaeData,
+  getTatekaeData,
+  settleAll,
+  updateTatekae,
+} from '@/app/actions';
 import type { TatekaeData } from '@/app/actions';
 import { useToast } from './ToastContext';
 
-type ListItem = { id: number; date: string; user: string; content: string; amount: number };
+type ListItem = { id: number; date: string; user: string; content: string; amount: number; isWedding: boolean };
 
 function personBadgeClass(person: string) {
   return person === 'みどり' ? 'badge-midori' : 'badge-kohei';
@@ -16,10 +23,12 @@ export default function ReimburseTab() {
   const [allList, setAllList] = useState<ListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
   const [user, setUser] = useState<'みどり' | 'こうへい'>('みどり');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [content, setContent] = useState('');
   const [amount, setAmount] = useState<number | ''>('');
+  const [isWedding, setIsWedding] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const showToast = useToast();
 
@@ -44,10 +53,13 @@ export default function ReimburseTab() {
     if (amount === '' || !content) return;
     setSubmitting(true);
     try {
-      await addTatekae(user, date, content, Number(amount));
-      showToast('立替金を追加しました');
-      setContent('');
-      setAmount('');
+      if (editId) {
+        await updateTatekae(editId, user, date, content, Number(amount), isWedding);
+        showToast('立替金を更新しました');
+      } else {
+        await addTatekae(user, date, content, Number(amount), isWedding);
+        showToast('立替金を追加しました');
+      }
       setModalOpen(false);
       load();
     } catch (err) {
@@ -55,6 +67,65 @@ export default function ReimburseTab() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function openAdd() {
+    setEditId(null);
+    setUser('みどり');
+    setDate(new Date().toISOString().split('T')[0]);
+    setContent('');
+    setAmount('');
+    setIsWedding(false);
+    setModalOpen(true);
+  }
+
+  function openEdit(item: ListItem) {
+    setEditId(item.id);
+    setUser(item.user === 'こうへい' ? 'こうへい' : 'みどり');
+    setDate(item.date);
+    setContent(item.content);
+    setAmount(item.amount);
+    setIsWedding(item.isWedding);
+    setModalOpen(true);
+  }
+
+  async function onDelete(id: number) {
+    if (!confirm('この立替を削除しますか？')) return;
+    try {
+      await deleteReimbursement(id);
+      showToast('削除しました');
+      load();
+    } catch (err) {
+      showToast('エラー: ' + (err as Error).message, true);
+    }
+  }
+
+  function renderItem(item: ListItem) {
+    return (
+      <div key={item.id} className="rounded-lg border border-slate-200 p-4">
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <span className={personBadgeClass(item.user)}>{item.user}</span>
+          <span className="flex items-center gap-2">
+            {item.isWedding && (
+              <span className="text-xs rounded-full px-2 py-0.5 bg-pink-50 text-pink-600 font-semibold">結婚</span>
+            )}
+            <span className="text-xs text-slate-500">{item.date}</span>
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <span className="text-sm text-slate-600 break-words">{item.content}</span>
+          <span className="font-bold shrink-0">{item.amount.toLocaleString()}円</span>
+        </div>
+        <div className="flex gap-2 justify-end">
+          <button className="btn-outline text-xs" onClick={() => openEdit(item)}>
+            編集
+          </button>
+          <button className="btn-outline-danger text-xs" onClick={() => onDelete(item.id)}>
+            削除
+          </button>
+        </div>
+      </div>
+    );
   }
 
   async function onSettleAll() {
@@ -90,7 +161,7 @@ export default function ReimburseTab() {
       <div className="card">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-bold">未精算の立替一覧</h2>
-          <button className="btn-primary text-xs" onClick={() => setModalOpen(true)}>
+          <button className="btn-primary text-xs" onClick={openAdd}>
             ＋
           </button>
         </div>
@@ -101,18 +172,7 @@ export default function ReimburseTab() {
           <p className="text-center text-slate-400 py-4">未精算のデータはありません</p>
         )}
         <div className="space-y-3">
-          {data?.list.map((item) => (
-            <div key={item.id} className="rounded-lg border border-slate-200 p-4">
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <span className={personBadgeClass(item.user)}>{item.user}</span>
-                <span className="text-xs text-slate-500">{item.date}</span>
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-sm text-slate-600 break-words">{item.content}</span>
-                <span className="font-bold shrink-0">{item.amount.toLocaleString()}円</span>
-              </div>
-            </div>
-          ))}
+          {data?.list.map(renderItem)}
         </div>
       </div>
 
@@ -122,25 +182,14 @@ export default function ReimburseTab() {
           <p className="text-center text-slate-400 py-4">精算済みの履歴はありません</p>
         )}
         <div className="space-y-3">
-          {allList.map((item) => (
-            <div key={item.id} className="rounded-lg border border-slate-200 p-4">
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <span className={personBadgeClass(item.user)}>{item.user}</span>
-                <span className="text-xs text-slate-500">{item.date}</span>
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-sm text-slate-600 break-words">{item.content}</span>
-                <span className="font-bold shrink-0">{item.amount.toLocaleString()}円</span>
-              </div>
-            </div>
-          ))}
+          {allList.map(renderItem)}
         </div>
       </div>
 
       {modalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setModalOpen(false)}>
           <form className="card w-full max-w-sm" onClick={(e) => e.stopPropagation()} onSubmit={onSubmit}>
-            <h3 className="font-bold mb-3">新しく立替を入力</h3>
+            <h3 className="font-bold mb-3">{editId ? '立替を編集' : '新しく立替を入力'}</h3>
             <div className="mb-3">
               <label className="text-sm font-bold block mb-1">誰が払った？</label>
               <div className="grid grid-cols-2 gap-2">
@@ -187,8 +236,12 @@ export default function ReimburseTab() {
                 onChange={(e) => setAmount(e.target.value === '' ? '' : Number(e.target.value))}
               />
             </div>
+            <label className="flex items-center gap-2 text-sm mb-3">
+              <input type="checkbox" checked={isWedding} onChange={(e) => setIsWedding(e.target.checked)} />
+              結婚関連の費用
+            </label>
             <button type="submit" className="btn-primary w-full" disabled={submitting}>
-              {submitting ? '送信中...' : '送信する'}
+              {submitting ? '送信中...' : editId ? '更新する' : '送信する'}
             </button>
           </form>
         </div>

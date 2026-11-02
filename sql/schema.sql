@@ -1,5 +1,6 @@
 -- 共有口座管理アプリ スキーマ
 -- Supabase の SQL Editor でこのファイルの内容をそのまま実行してください。
+-- 既存のDBには sql/add_wedding_flag.sql を実行して is_wedding 列を追加してください。
 
 create table if not exists transactions (
   id bigint generated always as identity primary key,

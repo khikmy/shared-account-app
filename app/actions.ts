@@ -25,6 +25,7 @@ import type {
   FixedVariableRow,
   Reimbursement,
   Transaction,
+  WeddingExpense,
 } from '@/lib/types';
 
 // ===================== 認証 =====================
@@ -100,6 +101,7 @@ export interface HistoryEntryInput {
   category: string;
   amount: number;
   memo?: string;
+  isWedding?: boolean;
 }
 
 export async function addHistory(entry: HistoryEntryInput): Promise<void> {
@@ -109,6 +111,7 @@ export async function addHistory(entry: HistoryEntryInput): Promise<void> {
     category: entry.category,
     amount: Number(entry.amount),
     memo: entry.memo || '',
+    is_wedding: !!entry.isWedding,
   });
   if (error) throw new Error(error.message);
   revalidatePath('/');
@@ -123,6 +126,7 @@ export async function updateHistory(id: number, entry: HistoryEntryInput): Promi
       category: entry.category,
       amount: Number(entry.amount),
       memo: entry.memo || '',
+      is_wedding: !!entry.isWedding,
     })
     .eq('id', id);
   if (error) throw new Error(error.message);
@@ -429,7 +433,8 @@ export async function addTatekae(
   user: string,
   date: string,
   content: string,
-  amount: number
+  amount: number,
+  isWedding = false
 ): Promise<void> {
   const { error } = await supabase.from('reimbursements').insert({
     payer: user,
@@ -437,7 +442,59 @@ export async function addTatekae(
     content,
     amount: Number(amount),
     status: '未精算',
+    is_wedding: isWedding,
   });
+  if (error) throw new Error(error.message);
+  revalidatePath('/');
+}
+
+// ===================== 結婚費用 =====================
+
+export async function getWeddingExpenses(): Promise<WeddingExpense[]> {
+  const [tx, re] = await Promise.all([
+    supabase.from('transactions').select('*').eq('is_wedding', true),
+    supabase.from('reimbursements').select('*').eq('is_wedding', true),
+  ]);
+  if (tx.error) throw new Error(tx.error.message);
+  if (re.error) throw new Error(re.error.message);
+
+  const rows: WeddingExpense[] = [
+    ...((tx.data || []) as Transaction[]).map((t) => ({
+      key: `tx-${t.id}`,
+      source: '共有口座' as const,
+      date: t.date,
+      person: t.person,
+      content: t.memo || t.category,
+      amount: Number(t.amount),
+      category: t.category,
+    })),
+    ...((re.data || []) as Reimbursement[]).map((r) => ({
+      key: `re-${r.id}`,
+      source: '立替金' as const,
+      date: r.incurred_date,
+      person: r.payer,
+      content: r.content,
+      // 立替金は割り勘後の金額で入力されているため、総額に戻して2倍で扱う
+      amount: Number(r.amount) * 2,
+      status: r.status,
+    })),
+  ];
+  rows.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  return rows;
+}
+
+export async function updateTatekae(
+  id: number,
+  user: string,
+  date: string,
+  content: string,
+  amount: number,
+  isWedding = false
+): Promise<void> {
+  const { error } = await supabase
+    .from('reimbursements')
+    .update({ payer: user, incurred_date: date, content, amount: Number(amount), is_wedding: isWedding })
+    .eq('id', id);
   if (error) throw new Error(error.message);
   revalidatePath('/');
 }
@@ -461,7 +518,7 @@ export interface TatekaeData {
   totalMidori: number;
   totalKohei: number;
   settlementMessage: string;
-  list: { id: number; date: string; user: string; content: string; amount: number }[];
+  list: { id: number; date: string; user: string; content: string; amount: number; isWedding: boolean }[];
 }
 
 export async function getTatekaeData(): Promise<TatekaeData> {
@@ -474,7 +531,7 @@ export async function getTatekaeData(): Promise<TatekaeData> {
   });
 
   const list = unsettled
-    .map((r) => ({ id: r.id, date: r.incurred_date, user: r.payer, content: r.content, amount: r.amount }))
+    .map((r) => ({ id: r.id, date: r.incurred_date, user: r.payer, content: r.content, amount: r.amount, isWedding: !!r.is_wedding }))
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 
   return {
@@ -486,11 +543,11 @@ export async function getTatekaeData(): Promise<TatekaeData> {
 }
 
 export async function getAllTatekaeData(): Promise<
-  { id: number; date: string; user: string; content: string; amount: number }[]
+  { id: number; date: string; user: string; content: string; amount: number; isWedding: boolean }[]
 > {
   const settled = await getReimbursements({ status: '精算済' });
   return settled
-    .map((r) => ({ id: r.id, date: r.incurred_date, user: r.payer, content: r.content, amount: r.amount }))
+    .map((r) => ({ id: r.id, date: r.incurred_date, user: r.payer, content: r.content, amount: r.amount, isWedding: !!r.is_wedding }))
     .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
 }
 
