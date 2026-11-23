@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { addHistory, deleteHistory, getHistory, getPeople, updateHistory } from '@/app/actions';
+import { addHistory, deleteHistory, getHistory, updateHistory } from '@/app/actions';
+import { loadPeople } from '@/lib/peopleClient';
 import { BANK_PERSON, FIXED_CATEGORIES, formatYen } from '@/lib/calc';
 import type { Transaction } from '@/lib/types';
 import { useToast } from './ToastContext';
@@ -29,7 +30,7 @@ export default function TransactionsSubTab({ month }: { month: string }) {
   const personOptions = [...people, BANK_PERSON];
 
   useEffect(() => {
-    getPeople().then(setPeople).catch(() => {});
+    loadPeople().then(setPeople).catch(() => {});
   }, []);
 
   function load() {
@@ -100,7 +101,10 @@ export default function TransactionsSubTab({ month }: { month: string }) {
         showToast('取引を追加しました');
       }
       setModalOpen(false);
-      getPeople().then(setPeople).catch(() => {});
+      // 新しい人名のときだけ取り直す (毎回サーバーで全取引を読まない)
+      if (entry.person !== BANK_PERSON && !people.includes(entry.person)) {
+        loadPeople(true).then(setPeople).catch(() => {});
+      }
       load();
     } catch (err) {
       showToast('エラー: ' + (err as Error).message, true);

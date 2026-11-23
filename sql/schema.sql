@@ -1,6 +1,7 @@
 -- 共有口座管理アプリ スキーマ
 -- Supabase の SQL Editor でこのファイルの内容をそのまま実行してください。
 -- 既存のDBには sql/add_wedding_flag.sql を実行して is_wedding 列を追加してください。
+-- 既存のDBには sql/add_budget_sort_order.sql を実行して budgets.sort_order 列も追加してください。
 
 create table if not exists transactions (
   id bigint generated always as identity primary key,
@@ -18,6 +19,7 @@ create table if not exists budgets (
   type text not null,         -- 固定費 / 変動費 / 貯金
   category text not null,
   amount numeric not null,
+  sort_order integer,         -- 月次予算画面での並び順(null は既定順)
   unique (target_month, category)
 );
 create index if not exists budgets_month_idx on budgets (target_month);

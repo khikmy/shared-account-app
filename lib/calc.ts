@@ -77,13 +77,17 @@ export function medianBudgetAmount(
   return Math.round(median(values) / 100) * 100;
 }
 
-export function sortByDisplayOrder<T extends { category: string }>(rows: T[]): T[] {
+/** 月次予算画面で保存した並び順(sort_order)を優先し、無いものは既定の並び順で後ろに並べる */
+export function sortByDisplayOrder<T extends { category: string; sort_order?: number | null }>(rows: T[]): T[] {
+  const defaultIndex = (category: string) => {
+    const i = BUDGET_DISPLAY_ORDER.indexOf(category);
+    return i === -1 ? BUDGET_DISPLAY_ORDER.length : i;
+  };
   return [...rows].sort((a, b) => {
-    let ai = BUDGET_DISPLAY_ORDER.indexOf(a.category);
-    let bi = BUDGET_DISPLAY_ORDER.indexOf(b.category);
-    if (ai === -1) ai = BUDGET_DISPLAY_ORDER.length;
-    if (bi === -1) bi = BUDGET_DISPLAY_ORDER.length;
-    return ai - bi;
+    const as = a.sort_order ?? Number.POSITIVE_INFINITY;
+    const bs = b.sort_order ?? Number.POSITIVE_INFINITY;
+    if (as !== bs) return as < bs ? -1 : 1;
+    return defaultIndex(a.category) - defaultIndex(b.category);
   });
 }
 
@@ -220,6 +224,17 @@ export function summarizeMonth(
   };
 }
 
+function groupByMonth<T>(rows: T[], keyOf: (row: T) => string): Map<string, T[]> {
+  const map = new Map<string, T[]>();
+  for (const row of rows) {
+    const k = keyOf(row);
+    const list = map.get(k);
+    if (list) list.push(row);
+    else map.set(k, [row]);
+  }
+  return map;
+}
+
 export function computeDashboard(
   monthStr: string,
   allTransactions: Transaction[],
@@ -239,6 +254,13 @@ export function computeDashboard(
   let prevPool = pool;
   let prevSavings = savings;
 
+  // 月ごとに1回だけ振り分けておく (月数 × 全件 の走査を避ける)
+  const txByMonth = groupByMonth(allTransactions, (t) => monthKeyFromDateStr(t.date));
+  const budgetByMonth = groupByMonth(allBudget, (b) => b.target_month);
+  const fvByMonth = groupByMonth(allFixedVariable, (f) => f.target_month);
+  const summarize = (mk: string) =>
+    summarizeMonth(txByMonth.get(mk) || [], budgetByMonth.get(mk) || [], fvByMonth.get(mk) || [], mk);
+
   let cursor = base;
   while (cursor <= target) {
     const mk = monthKey(cursor);
@@ -246,7 +268,7 @@ export function computeDashboard(
       prevPool = pool;
       prevSavings = savings;
     }
-    const m = summarizeMonth(allTransactions, allBudget, allFixedVariable, mk);
+    const m = summarize(mk);
     pool = pool + m.surplus + m.bankIncome;
     savings = savings + m.savingsActual;
     if (cursor >= historyFrom) {
@@ -257,7 +279,7 @@ export function computeDashboard(
   pool = prevPool;
   savings = prevSavings;
 
-  const current = summarizeMonth(allTransactions, allBudget, allFixedVariable, monthStr);
+  const current = summarize(monthStr);
 
   const personSettlement = people.map((p) => {
     let deposit: number;

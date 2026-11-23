@@ -16,6 +16,8 @@ export interface BudgetItem {
   type: BudgetType;
   category: string;
   amount: number;
+  /** 月次予算画面での並び順。null/未設定は既定順 */
+  sort_order?: number | null;
 }
 
 export interface FixedVariableActual {

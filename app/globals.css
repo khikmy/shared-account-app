@@ -57,6 +57,17 @@ body {
   @apply w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
 }
 
+/* date入力はブラウザ(特にiOS Safari)の固有幅・高さで他の欄とズレるため揃える */
+input[type='date'].input {
+  @apply block min-w-0 max-w-full;
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 2.375rem;
+}
+input[type='date'].input::-webkit-date-and-time-value {
+  text-align: left;
+}
+
 .table-wrap {
   @apply overflow-x-auto -mx-4 px-4;
 }
