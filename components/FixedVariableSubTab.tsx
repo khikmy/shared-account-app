@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { deleteFixedVariableActual, getFixedVariableActuals, getPeople, setFixedVariableActual } from '@/app/actions';
-import { BANK_PERSON, formatYen, sortByDisplayOrder } from '@/lib/calc';
+import { deleteFixedVariableActual, getFixedVariableActuals, setFixedVariableActual } from '@/app/actions';
+import { loadPeople } from '@/lib/peopleClient';
+import { BANK_PERSON, formatYen } from '@/lib/calc';
 import type { FixedVariableRow } from '@/lib/types';
 import { useToast } from './ToastContext';
 
@@ -30,13 +31,13 @@ export default function FixedVariableSubTab({ month, refreshKey = 0 }: { month: 
   function load() {
     setLoading(true);
     getFixedVariableActuals(month)
-      .then((rs) => setRows(sortByDisplayOrder(rs)))
+      .then(setRows) // 並び順は月次予算画面で決めたものがサーバーから返る
       .catch((err) => showToast('エラー: ' + err.message, true))
       .finally(() => setLoading(false));
   }
 
   useEffect(() => {
-    getPeople().then(setPeople).catch(() => {});
+    loadPeople().then(setPeople).catch(() => {});
   }, []);
 
   useEffect(() => {

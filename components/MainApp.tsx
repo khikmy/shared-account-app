@@ -171,7 +171,11 @@ export default function MainApp({
         )}
         {visitedTabs.has('budget') && (
           <div hidden={tab !== 'budget'}>
-            <BudgetTab month={month} onCopied={() => setRefreshKey((k) => k + 1)} />
+            <BudgetTab
+              month={month}
+              onCopied={() => setRefreshKey((k) => k + 1)}
+              onReordered={() => setRefreshKey((k) => k + 1)}
+            />
           </div>
         )}
       </div>

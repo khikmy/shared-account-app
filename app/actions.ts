@@ -1,7 +1,6 @@
 'use server';
 
 import { cookies } from 'next/headers';
-import { revalidatePath } from 'next/cache';
 import { supabase } from '@/lib/supabase';
 import { AUTH_COOKIE, verifyPassword } from '@/lib/auth';
 import {
@@ -17,6 +16,7 @@ import {
   isMedianBudgetLocked,
   medianBudgetAmount,
   monthKeyFromDateStr,
+  sortByDisplayOrder,
 } from '@/lib/calc';
 import type {
   BudgetItem,
@@ -49,6 +49,40 @@ export async function logout(): Promise<void> {
   store.delete(AUTH_COOKIE);
 }
 
+// ===================== 全件取得 =====================
+
+// Supabase は1回の取得が既定で1000行までで、超えた分は黙って切り捨てられる。
+// 1ページ目で総件数を取り、残りのページは並列で取得する。必要な列だけを指定して転送量を減らす。
+const PAGE_SIZE = 1000;
+
+async function fetchAll<T>(table: string, columns: string): Promise<T[]> {
+  const first = await supabase
+    .from(table)
+    .select(columns, { count: 'exact' })
+    .order('id')
+    .range(0, PAGE_SIZE - 1);
+  if (first.error) throw new Error(first.error.message);
+  const rows = ((first.data || []) as unknown) as T[];
+  const total = first.count ?? rows.length;
+  if (total <= PAGE_SIZE) return rows;
+
+  const pageCount = Math.ceil(total / PAGE_SIZE) - 1;
+  const rest = await Promise.all(
+    Array.from({ length: pageCount }, (_, i) =>
+      supabase
+        .from(table)
+        .select(columns)
+        .order('id')
+        .range((i + 1) * PAGE_SIZE, (i + 2) * PAGE_SIZE - 1)
+    )
+  );
+  for (const r of rest) {
+    if (r.error) throw new Error(r.error.message);
+    rows.push(...(((r.data || []) as unknown) as T[]));
+  }
+  return rows;
+}
+
 // ===================== マスタ =====================
 
 function peopleFromTransactions(rows: { person?: string | null }[]): string[] {
@@ -60,10 +94,16 @@ function peopleFromTransactions(rows: { person?: string | null }[]): string[] {
   return Array.from(set).sort();
 }
 
+// 人名は滅多に増えないので、全取引を読み直さないよう短時間キャッシュする (追加・更新時は破棄)
+const PEOPLE_TTL_MS = 60_000;
+let peopleCache: { value: string[]; expires: number } | null = null;
+
 export async function getPeople(): Promise<string[]> {
-  const { data, error } = await supabase.from('transactions').select('person');
-  if (error) throw new Error(error.message);
-  return peopleFromTransactions(data || []);
+  if (peopleCache && peopleCache.expires > Date.now()) return peopleCache.value;
+  const rows = await fetchAll<{ person: string }>('transactions', 'person');
+  const value = peopleFromTransactions(rows);
+  peopleCache = { value, expires: Date.now() + PEOPLE_TTL_MS };
+  return value;
 }
 
 export async function getCategories(): Promise<{ name: string; type: string }[]> {
@@ -109,6 +149,7 @@ export interface HistoryEntryInput {
 }
 
 export async function addHistory(entry: HistoryEntryInput): Promise<void> {
+  peopleCache = null;
   const { error } = await supabase.from('transactions').insert({
     date: entry.date,
     person: entry.person,
@@ -118,10 +159,10 @@ export async function addHistory(entry: HistoryEntryInput): Promise<void> {
     is_wedding: !!entry.isWedding,
   });
   if (error) throw new Error(error.message);
-  revalidatePath('/');
 }
 
 export async function updateHistory(id: number, entry: HistoryEntryInput): Promise<void> {
+  peopleCache = null;
   const { error } = await supabase
     .from('transactions')
     .update({
@@ -134,13 +175,11 @@ export async function updateHistory(id: number, entry: HistoryEntryInput): Promi
     })
     .eq('id', id);
   if (error) throw new Error(error.message);
-  revalidatePath('/');
 }
 
 export async function deleteHistory(id: number): Promise<void> {
   const { error } = await supabase.from('transactions').delete().eq('id', id);
   if (error) throw new Error(error.message);
-  revalidatePath('/');
 }
 
 // ===================== 予算 =====================
@@ -148,13 +187,22 @@ export async function deleteHistory(id: number): Promise<void> {
 export async function getBudget(monthStr: string): Promise<BudgetItem[]> {
   const { data, error } = await supabase.from('budgets').select('*').eq('target_month', monthStr);
   if (error) throw new Error(error.message);
-  return (data || []) as BudgetItem[];
+  return sortByDisplayOrder((data || []) as BudgetItem[]);
+}
+
+/** 月次予算の並び順を保存する (categories の並びがそのまま表示順になる)。固定費・変動費タブにも反映される */
+export async function reorderBudgetItems(monthStr: string, categories: string[]): Promise<void> {
+  const results = await Promise.all(
+    categories.map((category, index) =>
+      supabase.from('budgets').update({ sort_order: index }).eq('target_month', monthStr).eq('category', category)
+    )
+  );
+  const failed = results.find((r) => r.error);
+  if (failed?.error) throw new Error(failed.error.message);
 }
 
 async function getAllBudgetRaw(): Promise<BudgetItem[]> {
-  const { data, error } = await supabase.from('budgets').select('*');
-  if (error) throw new Error(error.message);
-  return (data || []) as BudgetItem[];
+  return fetchAll<BudgetItem>('budgets', 'id,target_month,type,category,amount');
 }
 
 export async function setBudgetItem(
@@ -173,7 +221,6 @@ export async function setBudgetItem(
       { onConflict: 'target_month,category' }
     );
   if (error) throw new Error(error.message);
-  revalidatePath('/');
 }
 
 export async function deleteBudgetItem(monthStr: string, category: string): Promise<void> {
@@ -186,7 +233,6 @@ export async function deleteBudgetItem(monthStr: string, category: string): Prom
     .eq('target_month', monthStr)
     .eq('category', category);
   if (error) throw new Error(error.message);
-  revalidatePath('/');
 }
 
 export async function copyBudgetFromPreviousMonth(monthStr: string): Promise<BudgetItem[]> {
@@ -194,8 +240,7 @@ export async function copyBudgetFromPreviousMonth(monthStr: string): Promise<Bud
   const prevDate = new Date(y, m - 2, 1);
   const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
 
-  const prevItems = await getBudget(prevMonth);
-  const current = await getBudget(monthStr);
+  const [prevItems, current] = await Promise.all([getBudget(prevMonth), getBudget(monthStr)]);
   const currentCategories = new Set(current.map((b) => b.category));
 
   const toInsert = prevItems
@@ -205,6 +250,8 @@ export async function copyBudgetFromPreviousMonth(monthStr: string): Promise<Bud
       category: item.category,
       amount: item.amount,
       type: item.type,
+      // 前月の並び順も引き継ぐ (未設定なら列自体を送らない)
+      ...(item.sort_order != null ? { sort_order: item.sort_order } : {}),
     }));
 
   if (toInsert.length > 0) {
@@ -213,7 +260,6 @@ export async function copyBudgetFromPreviousMonth(monthStr: string): Promise<Bud
   }
   await applyMedianBudgets(monthStr);
   await copyFixedVariableActualsFromPreviousMonth(prevMonth, monthStr);
-  revalidatePath('/');
   return getBudget(monthStr);
 }
 
@@ -246,12 +292,13 @@ async function copyFixedVariableActualsFromPreviousMonth(prevMonth: string, mont
 /** 中央値の算出対象分類ごとの月別実績 (食費・日用品は食費・消耗品費・交際費の取引合計) */
 async function getMedianActuals(): Promise<Record<string, Record<string, number>>> {
   const actuals: Record<string, Record<string, number>> = {};
-  (await getAllFixedVariableRaw()).forEach((r) => {
+  const [fixedVariable, transactions] = await Promise.all([getAllFixedVariableRaw(), getAllTransactionsRaw()]);
+  fixedVariable.forEach((r) => {
     (actuals[r.category] ??= {})[r.target_month] = Number(r.amount);
   });
   const foodCategories = new Set(['食費', '消耗品費', '交際費']);
   const food: Record<string, number> = {};
-  (await getAllTransactionsRaw()).forEach((t) => {
+  transactions.forEach((t) => {
     if (t.person === BANK_PERSON || !foodCategories.has(t.category)) return;
     const m = monthKeyFromDateStr(t.date);
     food[m] = (food[m] || 0) + Number(t.amount);
@@ -276,9 +323,7 @@ export async function getMedianActualTrend(
 async function applyMedianBudgets(monthStr: string): Promise<void> {
   if (monthStr < MEDIAN_BUDGET_START) return;
 
-  const actuals = await getMedianActuals();
-
-  const current = await getBudget(monthStr);
+  const [actuals, current] = await Promise.all([getMedianActuals(), getBudget(monthStr)]);
   const rows = MEDIAN_BUDGET_CATEGORIES.flatMap((category) => {
     const amount = medianBudgetAmount(category, monthStr, actuals[category] || {});
     if (amount === null) return [];
@@ -293,45 +338,35 @@ async function applyMedianBudgets(monthStr: string): Promise<void> {
 // ===================== 固定費・変動費 =====================
 
 async function getAllFixedVariableRaw(): Promise<FixedVariableActual[]> {
-  const { data, error } = await supabase.from('fixed_variable_actuals').select('*');
-  if (error) throw new Error(error.message);
-  return (data || []) as FixedVariableActual[];
+  return fetchAll<FixedVariableActual>('fixed_variable_actuals', 'id,target_month,type,category,person,amount');
 }
 
 async function getAllTransactionsRaw(): Promise<Transaction[]> {
-  const { data, error } = await supabase.from('transactions').select('*');
-  if (error) throw new Error(error.message);
-  return (data || []) as Transaction[];
+  return fetchAll<Transaction>('transactions', 'id,date,person,category,amount');
 }
 
 export async function getFixedVariableActuals(monthStr: string): Promise<FixedVariableRow[]> {
-  const budgetItems = (await getBudget(monthStr)).filter(
+  const [y, m] = monthStr.split('-').map(Number);
+  const next = new Date(y, m, 1);
+  const nextMonthStart = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-01`;
+
+  // 予算・実績・取引は互いに独立なので並列で取得する
+  const [allBudgetItems, fvRes, histRes] = await Promise.all([
+    getBudget(monthStr),
+    supabase.from('fixed_variable_actuals').select('category,person,amount').eq('target_month', monthStr),
+    supabase.from('transactions').select('category,amount').gte('date', `${monthStr}-01`).lt('date', nextMonthStart),
+  ]);
+  if (fvRes.error) throw new Error(fvRes.error.message);
+  if (histRes.error) throw new Error(histRes.error.message);
+
+  const budgetItems = allBudgetItems.filter(
     (b) => b.type === '固定費' || b.type === '変動費' || b.category === SAVINGS_CATEGORY
   );
-
-  const { data: fvData, error: fvErr } = await supabase
-    .from('fixed_variable_actuals')
-    .select('*')
-    .eq('target_month', monthStr);
-  if (fvErr) throw new Error(fvErr.message);
   const actualMap: Record<string, { amount: number; person: string }> = {};
-  (fvData || []).forEach((row: FixedVariableActual) => {
+  (fvRes.data || []).forEach((row: { category: string; person: string | null; amount: number }) => {
     actualMap[row.category] = { amount: row.amount, person: row.person || '' };
   });
-
-  const { data: histData, error: histErr } = await supabase
-    .from('transactions')
-    .select('date, category, amount')
-    .gte('date', `${monthStr}-01`)
-    .lt(
-      'date',
-      (() => {
-        const [y, m] = monthStr.split('-').map(Number);
-        const next = new Date(y, m, 1);
-        return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-01`;
-      })()
-    );
-  if (histErr) throw new Error(histErr.message);
+  const histData = histRes.data;
   const foodCategories = new Set(['食費', '消耗品費', '交際費']);
   const foodTotal = (histData || []).reduce(
     (sum: number, r: { category: string; amount: number }) =>
@@ -399,7 +434,6 @@ export async function setFixedVariableActual(
     { onConflict: 'target_month,category' }
   );
   if (error) throw new Error(error.message);
-  revalidatePath('/');
 }
 
 export async function deleteFixedVariableActual(monthStr: string, category: string): Promise<void> {
@@ -412,7 +446,6 @@ export async function deleteFixedVariableActual(monthStr: string, category: stri
     .eq('target_month', monthStr)
     .eq('category', category);
   if (error) throw new Error(error.message);
-  revalidatePath('/');
 }
 
 // ===================== 立替金 =====================
@@ -449,7 +482,6 @@ export async function addTatekae(
     is_wedding: isWedding,
   });
   if (error) throw new Error(error.message);
-  revalidatePath('/');
 }
 
 // ===================== 結婚費用 =====================
@@ -500,13 +532,11 @@ export async function updateTatekae(
     .update({ payer: user, incurred_date: date, content, amount: Number(amount), is_wedding: isWedding })
     .eq('id', id);
   if (error) throw new Error(error.message);
-  revalidatePath('/');
 }
 
 export async function deleteReimbursement(id: number): Promise<void> {
   const { error } = await supabase.from('reimbursements').delete().eq('id', id);
   if (error) throw new Error(error.message);
-  revalidatePath('/');
 }
 
 export async function settleAll(): Promise<void> {
@@ -515,7 +545,6 @@ export async function settleAll(): Promise<void> {
     .update({ status: '精算済' })
     .eq('status', '未精算');
   if (error) throw new Error(error.message);
-  revalidatePath('/');
 }
 
 export interface TatekaeData {
