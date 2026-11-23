@@ -91,11 +91,11 @@ export default function DashboardTab({
       <div className="card">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {cards.map((c) => (
-            <div key={c.label} className="p-3 border border-slate-200 rounded-lg text-center">
-              <div className="text-xs text-slate-500">{c.label}</div>
+            <div key={c.label} className="bg-slate-50 px-4 py-3.5 rounded-xl border border-slate-200">
+              <div className="text-xs font-bold text-slate-500 mb-1">{c.label}</div>
               <div
-                className={`text-lg font-bold ${
-                  c.signed ? (c.value >= 0 ? 'text-green-600' : 'text-red-500') : ''
+                className={`text-xl font-extrabold leading-tight ${
+                  c.signed ? (c.value >= 0 ? 'text-green-600' : 'text-red-600') : 'text-slate-900'
                 }`}
               >
                 {formatYen(c.value)}
@@ -145,7 +145,7 @@ export default function DashboardTab({
           highlightMonth={month}
           label="共有口座残高の推移"
           series={[
-            { name: '共有口座残高', color: '#2563eb', axis: 'left', points: data.history.map((h) => ({ month: h.month, value: h.balance })) },
+            { name: '共有口座残高', color: '#4a68c4', axis: 'left', points: data.history.map((h) => ({ month: h.month, value: h.balance })) },
           ]}
         />
       </div>
@@ -158,7 +158,7 @@ export default function DashboardTab({
           highlightMonth={month}
           label="今月の収支の推移"
           series={[
-            { name: '今月の収支', color: '#22c55e', axis: 'left', points: data.history.map((h) => ({ month: h.month, value: h.net })) },
+            { name: '今月の収支', color: '#2f9e6b', axis: 'left', points: data.history.map((h) => ({ month: h.month, value: h.net })) },
           ]}
         />
       </div>
