@@ -5,6 +5,7 @@ import { deleteFixedVariableActual, getFixedVariableActuals, setFixedVariableAct
 import { loadPeople } from '@/lib/peopleClient';
 import { BANK_PERSON, formatYen } from '@/lib/calc';
 import type { FixedVariableRow } from '@/lib/types';
+import { useDataSync } from './DataSyncContext';
 import { useToast } from './ToastContext';
 
 function typeBadgeClass(type: string) {
@@ -27,6 +28,7 @@ export default function FixedVariableSubTab({ month, refreshKey = 0 }: { month: 
   const [editAmount, setEditAmount] = useState<string>('');
   const [editPerson, setEditPerson] = useState<string>('');
   const showToast = useToast();
+  const { notify } = useDataSync();
 
   function load() {
     setLoading(true);
@@ -63,7 +65,7 @@ export default function FixedVariableSubTab({ month, refreshKey = 0 }: { month: 
       await setFixedVariableActual(month, category, Number(editAmount) || 0, editPerson);
       showToast('保存しました');
       setEditingCategory(null);
-      load();
+      notify();
     } catch (err) {
       showToast('エラー: ' + (err as Error).message, true);
     }
@@ -74,7 +76,7 @@ export default function FixedVariableSubTab({ month, refreshKey = 0 }: { month: 
     try {
       await deleteFixedVariableActual(month, category);
       showToast('削除しました');
-      load();
+      notify();
     } catch (err) {
       showToast('エラー: ' + (err as Error).message, true);
     }

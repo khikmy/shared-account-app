@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { DashboardData } from '@/lib/types';
 import { logout } from '@/app/actions';
+import { DataSyncContext } from './DataSyncContext';
 import { ToastProvider } from './ToastContext';
 import DashboardTab from './DashboardTab';
 import HistoryTab from './HistoryTab';
@@ -37,8 +38,10 @@ export default function MainApp({
   const [menuOpen, setMenuOpen] = useState(false);
   const [reimburseVisited, setReimburseVisited] = useState(false);
   const [tab, setTab] = useState<TabKey>('dashboard');
-  // 予算の前月コピーなど、他タブの表示に影響する更新があったときに増やし、各タブを再読み込みさせる
+  // 取引・予算・固定費変動費の更新があったときに増やし、各タブを再読み込みさせる
   const [refreshKey, setRefreshKey] = useState(0);
+  const notify = useCallback(() => setRefreshKey((k) => k + 1), []);
+  const dataSync = useMemo(() => ({ version: refreshKey, notify }), [refreshKey, notify]);
   const [visitedTabs, setVisitedTabs] = useState<Set<TabKey>>(() => new Set(['dashboard']));
 
   function handleLogout() {
@@ -81,6 +84,7 @@ export default function MainApp({
 
   return (
     <ToastProvider>
+      <DataSyncContext.Provider value={dataSync}>
       <div className="lg:flex min-h-screen">
         {/* デスクトップ: 左に固定するサイドバー */}
         <aside className="hidden lg:flex sticky top-0 h-screen w-60 shrink-0 flex-col bg-white border-r border-slate-200">
@@ -206,11 +210,7 @@ export default function MainApp({
             )}
             {visitedTabs.has('budget') && (
               <div hidden={tab !== 'budget'}>
-                <BudgetTab
-                  month={month}
-                  onCopied={() => setRefreshKey((k) => k + 1)}
-                  onReordered={() => setRefreshKey((k) => k + 1)}
-                />
+                <BudgetTab month={month} />
               </div>
             )}
           </div>
@@ -230,6 +230,7 @@ export default function MainApp({
           )}
         </div>
       </div>
+      </DataSyncContext.Provider>
     </ToastProvider>
   );
 }

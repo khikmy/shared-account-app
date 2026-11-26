@@ -5,6 +5,7 @@ import { addHistory, deleteHistory, getHistory, updateHistory } from '@/app/acti
 import { loadPeople } from '@/lib/peopleClient';
 import { BANK_PERSON, FIXED_CATEGORIES, formatYen } from '@/lib/calc';
 import type { Transaction } from '@/lib/types';
+import { useDataSync } from './DataSyncContext';
 import { useToast } from './ToastContext';
 
 function personBadgeClass(person: string) {
@@ -27,6 +28,7 @@ export default function TransactionsSubTab({ month }: { month: string }) {
   const [editId, setEditId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
   const showToast = useToast();
+  const { version, notify } = useDataSync();
   const personOptions = [...people, BANK_PERSON];
 
   useEffect(() => {
@@ -49,7 +51,7 @@ export default function TransactionsSubTab({ month }: { month: string }) {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month, monthOnly, personFilter, categoryFilter, keyword]);
+  }, [month, monthOnly, personFilter, categoryFilter, keyword, version]);
 
   const total = rows.reduce((sum, r) => (r.person === BANK_PERSON ? sum : sum + Number(r.amount || 0)), 0);
   const categoryTotals: Record<string, number> = { 食費: 0, 消耗品費: 0, 交際費: 0 };
@@ -105,7 +107,7 @@ export default function TransactionsSubTab({ month }: { month: string }) {
       if (entry.person !== BANK_PERSON && !people.includes(entry.person)) {
         loadPeople(true).then(setPeople).catch(() => {});
       }
-      load();
+      notify();
     } catch (err) {
       showToast('エラー: ' + (err as Error).message, true);
     }
@@ -116,7 +118,7 @@ export default function TransactionsSubTab({ month }: { month: string }) {
     try {
       await deleteHistory(id);
       showToast('削除しました');
-      load();
+      notify();
     } catch (err) {
       showToast('エラー: ' + (err as Error).message, true);
     }
