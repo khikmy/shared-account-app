@@ -8,6 +8,7 @@ import { copyBudgetFromPreviousMonth, deleteBudgetItem, getBudget, reorderBudget
 import { formatYen, isMedianBudgetLocked } from '@/lib/calc';
 import type { BudgetItem, BudgetType } from '@/lib/types';
 import MedianTrendChart from './MedianTrendChart';
+import { useDataSync } from './DataSyncContext';
 import { useToast } from './ToastContext';
 
 function typeBadgeClass(type: string) {
@@ -53,7 +54,7 @@ function SortableCard({
   );
 }
 
-export default function BudgetTab({ month, onCopied, onReordered }: { month: string; onCopied?: () => void; onReordered?: () => void }) {
+export default function BudgetTab({ month }: { month: string }) {
   const [rows, setRows] = useState<BudgetItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -63,6 +64,7 @@ export default function BudgetTab({ month, onCopied, onReordered }: { month: str
   const [savingOrder, setSavingOrder] = useState(false);
   const [chartCategory, setChartCategory] = useState<string | null>(null);
   const showToast = useToast();
+  const { version, notify } = useDataSync();
 
   const [newCategory, setNewCategory] = useState('');
   const [newType, setNewType] = useState<BudgetType>('変動費');
@@ -79,7 +81,7 @@ export default function BudgetTab({ month, onCopied, onReordered }: { month: str
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month]);
+  }, [month, version]);
 
   const total = rows.reduce((sum, r) => sum + Number(r.amount || 0), 0);
 
@@ -93,7 +95,7 @@ export default function BudgetTab({ month, onCopied, onReordered }: { month: str
       setNewAmount('');
       setNewType('変動費');
       setShowForm(false);
-      load();
+      notify();
     } catch (err) {
       showToast('エラー: ' + (err as Error).message, true);
     }
@@ -104,7 +106,7 @@ export default function BudgetTab({ month, onCopied, onReordered }: { month: str
       await setBudgetItem(month, category, editAmount, type);
       showToast('予算を保存しました');
       setEditingCategory(null);
-      load();
+      notify();
     } catch (err) {
       showToast('エラー: ' + (err as Error).message, true);
     }
@@ -115,7 +117,7 @@ export default function BudgetTab({ month, onCopied, onReordered }: { month: str
     try {
       await deleteBudgetItem(month, category);
       showToast('削除しました');
-      load();
+      notify();
     } catch (err) {
       showToast('エラー: ' + (err as Error).message, true);
     }
@@ -144,7 +146,7 @@ export default function BudgetTab({ month, onCopied, onReordered }: { month: str
         month,
         next.map((r) => r.category),
       );
-      onReordered?.();
+      notify();
     } catch (err) {
       setRows(previous);
       showToast('並び替えに失敗しました: ' + (err as Error).message, true);
@@ -159,7 +161,7 @@ export default function BudgetTab({ month, onCopied, onReordered }: { month: str
       const rs = await copyBudgetFromPreviousMonth(month);
       showToast('前月の予算と固定費・変動費の実績をコピーしました');
       setRows(rs);
-      onCopied?.();
+      notify();
     } catch (err) {
       showToast('エラー: ' + (err as Error).message, true);
     } finally {
